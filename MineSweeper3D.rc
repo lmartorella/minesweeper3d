@@ -70,8 +70,7 @@ CAPTION "Informazioni su MineSweeper3D"
 FONT 8, "MS Sans Serif"
 BEGIN
     ICON            128,IDC_STATIC,11,17,20,20
-    LTEXT           "MineSweeper3D Versione 1.0",IDC_STATIC,40,10,119,8,
-                    SS_NOPREFIX
+    LTEXT           "",IDC_VERSION,40,10,119,8,SS_NOPREFIX
     LTEXT           "Copyright (C) 2001",IDC_STATIC,40,25,119,8
     DEFPUSHBUTTON   "OK",IDOK,178,7,50,14,WS_GROUP
 END
@@ -166,7 +165,13 @@ IDR_MENU1 MENU DISCARDABLE
 BEGIN
     POPUP "File"
     BEGIN
-        MENUITEM "New Game",                    ID_FILE_NEWGAME
+        POPUP "New Game"
+        BEGIN
+            MENUITEM "Icosahedron (20)",            IDM_ICO1
+            MENUITEM "2-Icosahedron (80)",          IDM_ICO2
+            MENUITEM "3-Icosahedron (320)",         IDM_ICO3
+            MENUITEM "4-Icosahedron (1280)",        IDM_ICO4
+        END
         MENUITEM SEPARATOR
         MENUITEM "Exit",                        ID_FILE_EXIT
     END
@@ -185,7 +190,7 @@ END
 
 STRINGTABLE DISCARDABLE 
 BEGIN
-    IDS_ABOUTBOX            "Infor&mazioni su MineSweeper3D..."
+    IDS_VERSION             "0.41alfa"
 END
 
 #endif    // Italian (Italy) resources

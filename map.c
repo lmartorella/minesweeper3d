@@ -108,6 +108,7 @@ int	prepareMap (struct MINESWEEPER_MAP * map, int mines)
 	int i, j, c;
 
 	map->nMines = mines;
+	map->nChecked = 0;
 
 	// Vicini
 	map->neighbour = (struct MINESWEEPER_NEIGHBOUR*) malloc (sizeof (struct MINESWEEPER_NEIGHBOUR) * map->nPlaces);

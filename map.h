@@ -43,10 +43,10 @@ struct	MINESWEEPER_MAP {
 	// NEIGHBOURs
 		struct MINESWEEPER_NEIGHBOUR *	neighbour;
 		
-	
 	// Gioco
 		int *	place;		// piazzole. -1 se c'è mina
 		int		nMines;
+		int		nChecked;
 };
 
 

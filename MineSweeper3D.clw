@@ -2,7 +2,7 @@
 
 [General Info]
 Version=1
-LastClass=CMineSweeper3DDlg
+LastClass=CAboutDlg
 LastTemplate=CDialog
 NewFileInclude1=#include "stdafx.h"
 NewFileInclude2=#include "MineSweeper3D.h"
@@ -38,13 +38,16 @@ Type=0
 HeaderFile=MineSweeper3DDlg.h
 ImplementationFile=MineSweeper3DDlg.cpp
 Filter=D
+BaseClass=CDialog
+VirtualFilter=dWC
+LastObject=CAboutDlg
 
 [DLG:IDD_ABOUTBOX]
 Type=1
 Class=CAboutDlg
 ControlCount=4
 Control1=IDC_STATIC,static,1342177283
-Control2=IDC_STATIC,static,1342308480
+Control2=IDC_VERSION,static,1342308480
 Control3=IDC_STATIC,static,1342308352
 Control4=IDOK,button,1342373889
 
@@ -56,8 +59,11 @@ ControlCount=0
 [MNU:IDR_MENU1]
 Type=1
 Class=?
-Command1=ID_FILE_NEWGAME
-Command2=ID_FILE_EXIT
-Command3=IDM_ABOUTBOX
-CommandCount=3
+Command1=IDM_ICO1
+Command2=IDM_ICO2
+Command3=IDM_ICO3
+Command4=IDM_ICO4
+Command5=ID_FILE_EXIT
+Command6=IDM_ABOUTBOX
+CommandCount=6
 

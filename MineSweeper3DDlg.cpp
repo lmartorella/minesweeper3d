@@ -85,6 +85,7 @@ public:
 // Dialog Data
 	//{{AFX_DATA(CAboutDlg)
 	enum { IDD = IDD_ABOUTBOX };
+	CString	m_version;
 	//}}AFX_DATA
 
 	// ClassWizard generated virtual function overrides
@@ -96,6 +97,7 @@ public:
 // Implementation
 protected:
 	//{{AFX_MSG(CAboutDlg)
+	virtual BOOL OnInitDialog();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };
@@ -103,6 +105,7 @@ protected:
 CAboutDlg::CAboutDlg() : CDialog(CAboutDlg::IDD)
 {
 	//{{AFX_DATA_INIT(CAboutDlg)
+	m_version = _T("");
 	//}}AFX_DATA_INIT
 }
 
@@ -110,12 +113,12 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
 	//{{AFX_DATA_MAP(CAboutDlg)
+	DDX_Text(pDX, IDC_VERSION, m_version);
 	//}}AFX_DATA_MAP
 }
 
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialog)
 	//{{AFX_MSG_MAP(CAboutDlg)
-		// No message handlers
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -293,21 +296,16 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
     hRC = wglCreateContext(pDC->m_hDC);
     wglMakeCurrent(pDC->m_hDC, hRC);
 
-	// Timer. In Windows 9x, il clock di sistema ha periodo di 55 ms circa. Per questo NON
-	// si può ottenere una frequenza di messaggi WM_TIMER superiore a circa 18.2 Hz.
-	// Windows NT e 2000 hanno la possibilità di scendere fino a 10 ms, ma scegliamo di
-	// mantenere la compatibilità.
 	if (!QueryPerformanceFrequency (&perfPeriod)) {
 		AfxMessageBox ("Performance Timer not supported by hardware", MB_OK);
 		exit (1);
 	}
-	QueryPerformanceCounter (&pauseCount);
-	lastPerfCount = pauseCount;
 	perfPeriod.QuadPart /= 10;			// decimi di secondo
 	gaming = false;
-	SetTimer (EVENTTIMER, 54, NULL);
+	SetTimer (EVENTTIMER, 500, NULL);	// per rinfresco passivo
 
 	cursorSetting = false;
+	poll = false;
 
 	oglInit();
 
@@ -315,24 +313,48 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 }
 
 
-void	CMineSweeper3DDlg::NewGame()
+struct ALLMAPS {
+	DWORD	commandType;
+	int		mines;
+
+	DWORD	mapType;
+	int		param;
+} maps[4] = {	{	IDM_ICO1, 2, MAP_NUPICOSAHEDRON, 0 },
+				{   IDM_ICO2, 8, MAP_NUPICOSAHEDRON, 1 },
+				{   IDM_ICO3, 32, MAP_NUPICOSAHEDRON, 2 },
+				{   IDM_ICO4, 128, MAP_NUPICOSAHEDRON, 3 } };
+  
+		
+
+void	CMineSweeper3DDlg::NewGame (DWORD type)
 {
 	gaming = false;
 	gameClose();
 	destroyMap (&map);
 
-	if (!buildMap (&map, MAP_NUPICOSAHEDRON, 2)) {
+	for (int i = 0; i < 4; i++)
+		if (maps[i].commandType == type)
+			break;
+
+	if (i >= 4)
+		return;
+	
+	if (!buildMap (&map, maps[i].mapType, maps[i].param)) {
 		AfxMessageBox ("Error building map", MB_OK);
 		exit (1);
 	}
 
-	if (!prepareMap (&map, 32)) {				// mette le mine
+	if (!prepareMap (&map, maps[i].mines)) {				// mette le mine
 		AfxMessageBox ("Too neighbour in map preparation", MB_OK);
 		exit (1);
 	}
 
 	if (!gameInit(&map))
 		exit (1);
+
+	QueryPerformanceCounter (&pauseCount);
+	lastPerfCount = pauseCount;
+	timerSet (0);
 
 	PostMessage (WM_PAINT);
 }
@@ -377,6 +399,8 @@ void CMineSweeper3DDlg::OnPaint()
 	    SwapBuffers(pDC->m_hDC);				/* nop if singlebuffered */
 		BeginPaint(&ps);
 		EndPaint(&ps);
+
+		poll = false;
 	}
 }
 
@@ -515,8 +539,12 @@ BOOL CMineSweeper3DDlg::OnCommand(WPARAM wParam, LPARAM lParam)
 	case ID_FILE_EXIT:
 		PostQuitMessage(0);
 		return TRUE;
-	case ID_FILE_NEWGAME:
-		NewGame();
+	case IDM_ICO1:
+	case IDM_ICO2:
+	case IDM_ICO3:
+	case IDM_ICO4:
+		NewGame (wParam);
+
 	default:
 		return CDialog::OnCommand(wParam, lParam);
 	}
@@ -580,9 +608,22 @@ void CMineSweeper3DDlg::OnTimer(UINT nIDEvent)
 	if (nIDEvent != EVENTTIMER)
 		CDialog::OnTimer(nIDEvent);
 
-	if (!gaming)
-		return;
-
-	PostMessage (WM_PAINT);
+	if (poll && gaming)
+		PostMessage (WM_PAINT);
+	poll = true;
 }
 
+
+BOOL CAboutDlg::OnInitDialog() 
+{
+	CDialog::OnInitDialog();
+	
+	CString strAbout;
+	strAbout.LoadString(IDS_VERSION);
+
+	m_version = "MineSweeper 3D Versione " + strAbout;
+	UpdateData (FALSE);
+
+	return TRUE;  // return TRUE unless you set the focus to a control
+	              // EXCEPTION: OCX Property Pages should return FALSE
+}

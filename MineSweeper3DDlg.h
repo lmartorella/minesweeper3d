@@ -56,7 +56,8 @@ protected:
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 private:
-	void NewGame();
+	bool poll;
+	void NewGame(DWORD map);
 	bool cursorSetting;
 	LARGE_INTEGER pauseCount;
 	LARGE_INTEGER perfPeriod;

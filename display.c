@@ -4,30 +4,82 @@
 #include "map.h"
 
 
-#undef __DEBUG_MAP_
+#undef __DEBUG_MAP_				// Evita l'errore "too few vertices for place"
 
 
 
-	/* device context */
 
 
+/* Viewport window */
 static 	GLuint screenViewport [4];
 
-
-
-#define degrees 32.0
-
-
-
-
-
-
-// ------------------------------------------------------- FONT
-// ------------------------------------------------------- FONT
-// ------------------------------------------------------- FONT
-// ------------------------------------------------------- FONT
-
+/* FONT */
 static GLuint fontOffset;
+
+/* FILE IMAGE */
+static char texFileName[] = "bitlist.raw";
+static int singleTexWidth = 16, singleTexHeight = 16;
+static int interleaveX = 1, interleaveY = 0;
+static int texRows = 1, texColumns = 12;
+
+/* Texture Object */
+#define TEX_FLAG 0
+#define TEX_MINE 1
+#define TEX_NUMBASE 2
+static GLuint * texName = NULL;
+
+/* Mappa */
+static	struct MINESWEEPER_MAP	* mapGame;
+struct	MAP_POLY {
+		// Numero di triangoli
+		int		nTri;
+		// Array [0..nTri-1], contiene indice di faccia del triangolo, secondo la mappa del gioco
+		int		* triIdx;
+		// Array [0..nTri*9] contenente in ordine tutti i vertici [x,y,z] di tutti i triangoli
+		GLfloat	* triV;
+
+		// Numero di altri poliogoni (lati > 3)
+		int		nOthers;
+		// Array [0..nOthers-1], contiene indice di faccia del poli, secondo la mappa del gioco
+		int		* othersIdx;
+		// Array [0..nOthers-1], contiene il numero di facce dei poligoni enumerati
+		int		* othersNVx;			
+		// Array [0..] contenente in ordine tutti i vertici [x,y,z] di tutti i poly
+		GLfloat * othersV;
+} mapPoly = {0, NULL, NULL, 0, NULL, NULL, NULL};
+
+/* SELECT */
+#define MAX_HITBUFSIZE 512
+
+/* Mouse buttons */
+static  int buttons = 0;
+#define X_SENS 2.25e-03f
+#define Y_SENS 2.25e-03f
+
+/* GAME */
+static int gamePaused = 0;
+static int game = 0;
+static int time = 0;
+static int ended = 0;
+static GLfloat rot[16] = {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
+
+/* OPENGL */
+#define Z_VIEW -3.6f
+#define Z_MIN  0.1f
+#define Z_MAX  10.0f
+#define FOV    32.0f		
+
+
+
+
+
+
+
+// ------------------------------------------------------- FONT
+// ------------------------------------------------------- FONT
+// ------------------------------------------------------- FONT
+// ------------------------------------------------------- FONT
+
 
 GLubyte space[] =
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -132,18 +184,6 @@ void printString(char *s)
 // ------------------------------------------------------- TEXTURES
 
 
-/* IMAGE */
-static char texFileName[] = "bitlist.raw";
-static int singleTexWidth = 16, singleTexHeight = 16;
-static int interleaveX = 1, interleaveY = 0;
-static int texRows = 1, texColumns = 12;
-
-
-/* Texture Object */
-#define TEX_FLAG 0
-#define TEX_MINE 1
-#define TEX_NUMBASE 2
-static GLuint * texName = NULL;
 
 int		buildTextures()
 {
@@ -162,7 +202,7 @@ int		buildTextures()
 	file = fopen (texFileName, "rb");
 	if (file == NULL) {
 	    MessageBox(NULL, "Texfile not found", "Error", MB_OK);
-	    return 0;
+		return 0;
 	}
 	if (fread (buffer, width * height * 3, 1, file) != 1) {
 	    MessageBox(NULL, "Texfile error", "Error", MB_OK);
@@ -244,26 +284,6 @@ void	freeTextures()
 // ------------------------------------------------------- OBJECTS
 // ------------------------------------------------------- OBJECTS
 
-
-// Strutture dati
-static	struct MINESWEEPER_MAP	* mapGame;
-struct	MAP_POLY {
-		// Numero di triangoli
-		int		nTri;
-		// Array [0..nTri-1], contiene indice di faccia del triangolo, secondo la mappa del gioco
-		int		* triIdx;
-		// Array [0..nTri*9] contenente in ordine tutti i vertici [x,y,z] di tutti i triangoli
-		GLfloat	* triV;
-
-		// Numero di altri poliogoni (lati > 3)
-		int		nOthers;
-		// Array [0..nOthers-1], contiene indice di faccia del poli, secondo la mappa del gioco
-		int		* othersIdx;
-		// Array [0..nOthers-1], contiene il numero di facce dei poligoni enumerati
-		int		* othersNVx;			
-		// Array [0..] contenente in ordine tutti i vertici [x,y,z] di tutti i poly
-		GLfloat * othersV;
-} mapPoly = {0, NULL, NULL, 0, NULL, NULL, NULL};
 
 
 int		buildStructure ()
@@ -399,7 +419,6 @@ void	freeMap ()
 // ------------------------------------------------------- HITS
 // ------------------------------------------------------- HITS
 
-#define MAX_HITBUFSIZE 512
 
 int		selectFace (int x, int y)
 {
@@ -420,7 +439,7 @@ int		selectFace (int x, int y)
     glLoadIdentity ();
     gluPickMatrix ((GLdouble) x, (GLdouble) (screenViewport[3] - y),
                     2.0, 2.0, screenViewport);
-    gluPerspective(degrees, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
+    gluPerspective(FOV, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
 
 	p = 0;
 	if (mapPoly.nTri > 0) {
@@ -501,17 +520,222 @@ int		selectFace (int x, int y)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ------------------------------------------------ MOUSE EVENTS
+// ------------------------------------------------ MOUSE EVENTS
+// ------------------------------------------------ MOUSE EVENTS
+// ------------------------------------------------ MOUSE EVENTS
+
+
+
+void	mult (GLfloat * m1, GLfloat * m2, GLfloat * r)
+{
+	int i, j, k;
+	
+	for (i = 0; i < 3; i++)				// i riga
+		for (j = 0; j < 3; j++) {		// j colonna
+			r[i + j * 4] = 0;
+			for (k = 0; k < 3; k++)
+				r[i + j * 4] += m1[i + k * 4] * m2[j * 4 + k];
+		}
+}
+
+
+
+int		mouseMove(int dx, int dy)
+{
+	GLfloat x, y, cf, sf, ct, st;
+	static GLfloat	rotxy[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}, 
+					r[16]     = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
+
+	y = dy * X_SENS;
+	x = dx * Y_SENS;
+	
+	ct = (float)cos (x), st = (float)sin (x);
+	cf = (float)cos (y), sf = (float)sin (y);
+
+	rotxy[0] = ct, rotxy[1] = st*sf, rotxy[2] = -st*cf;
+	rotxy[5] = cf, rotxy[6] = sf;
+	rotxy[8] = st, rotxy[9] = -sf*ct, rotxy[10] = ct*cf;
+	
+	mult (rotxy, rot, r);
+
+	glLoadIdentity();
+	glTranslatef (0.0, 0.0, Z_VIEW);
+	glMultMatrixf (r);
+
+	memcpy (rot, r, sizeof (GLfloat) * 16);
+
+	return 1;
+}
+
+
+
+void	explosion ()
+{
+	int i;
+
+	// Scòppia
+	for (i = 0; i < mapGame->nPlaces; i++)
+		if (mapGame->place[i] & MAP_PLACE_MINE && !(mapGame->place[i] & MAP_PLACE_FLAG))
+			mapGame->place[i] &= ~(MAP_PLACE_COVERED);
+	ended = 1;
+}
+
+
 void	secureSweeper (int idx)
 {
 	int i = -1, neigh;
 
+#ifdef _DEBUG
+	if (mapGame->place[idx] & MAP_PLACE_COVERED == 0)
+		__asm {int 3}
+#endif
+
 	mapGame->place[idx] &= (~MAP_PLACE_COVERED);
+	mapGame->nChecked++;
+
 	if ((mapGame->place[idx] & MAP_PLACE_NUMMASK) != 0)
 		return;
 
 	while (i++, ((neigh = mapGame->neighbour[idx].n[i]) != -1) && i < MAX_NEIGHBOURS)
 		if (mapGame->place[neigh] & MAP_PLACE_COVERED && !(mapGame->place[neigh] & MAP_PLACE_FLAG)) 
 			secureSweeper (neigh);	
+}
+
+
+
+int		mouseButton (UINT msg, int x, int y)
+{
+	int hit, k, n, err, flag, a;
+
+	if (ended)
+		return 0;
+
+	switch (msg) {
+	case WM_LBUTTONDOWN:
+		buttons |= 1;
+		return 0;
+
+	case WM_RBUTTONDOWN:
+		buttons |= 2;
+
+		hit = selectFace (x, y);
+		if (hit == -1)
+			return 0;
+		if (!(mapGame->place[hit] & MAP_PLACE_COVERED))
+			return 0;
+
+		if (mapGame->place[hit] & MAP_PLACE_FLAG)
+			mapGame->nMines++, mapGame->nChecked--;
+		else
+			mapGame->nMines--, mapGame->nChecked++;
+			
+		mapGame->place[hit] ^= MAP_PLACE_FLAG;
+		if (mapGame->nChecked == mapGame->nPlaces)
+			ended = 1;			// finito!
+		return 1;
+
+	case WM_LBUTTONUP:
+	case WM_RBUTTONUP:
+		
+		hit = selectFace (x, y);
+		if (hit == -1)
+			return 0;
+
+		if (msg == WM_LBUTTONUP && buttons == 1) {
+			buttons = 0;
+			if ((!(mapGame->place[hit] & MAP_PLACE_COVERED)) ||
+				mapGame->place[hit] & MAP_PLACE_FLAG) 
+				return 0;
+
+			if (mapGame->place[hit] & MAP_PLACE_MINE) {
+				explosion();
+				return 1;		
+			}
+			secureSweeper (hit);
+			if (mapGame->nChecked == mapGame->nPlaces)
+				ended = 1;			// finito!
+			return 1;
+		}
+		else if (msg == WM_RBUTTONUP && !(buttons & 1)) {
+			buttons &= ~2;
+			return 0;
+		}
+		else if (buttons == 3) {
+			// Proc. doppio tasto
+			buttons = 0;
+			n = mapGame->place[hit] & MAP_PLACE_NUMMASK;
+			if (mapGame->place[hit] & MAP_PLACE_COVERED || n == 0)
+				return 0;
+			
+			err = flag = 0;
+			for (k = 0; k < MAX_NEIGHBOURS && mapGame->neighbour[hit].n[k] != -1; k++) {
+				a = mapGame->place[mapGame->neighbour[hit].n[k]] & (MAP_PLACE_MINE | MAP_PLACE_FLAG);
+				if (a != 0 && a != (MAP_PLACE_MINE | MAP_PLACE_FLAG))
+					err++;
+				if (a & MAP_PLACE_FLAG)
+					flag++;
+			}
+			if (err == 0) {
+				k = -1;
+				while (k++, ((n = mapGame->neighbour[hit].n[k]) != -1) && k < MAX_NEIGHBOURS)
+					if (mapGame->place[n] & MAP_PLACE_COVERED && !(mapGame->place[n] & MAP_PLACE_FLAG)) 
+						secureSweeper (n);	
+
+				if (mapGame->nChecked == mapGame->nPlaces)
+					ended = 1;			// finito!
+				return 1;
+			}
+			else if (flag != n)
+				return 0;
+			// Esplode
+			explosion();
+			return 1;
+		}
+
+	default:
+		return 0;
+	}
 }
 
 
@@ -545,16 +769,16 @@ void	secureSweeper (int idx)
 
 
 
+
+
+
+
+
 // ------------------------------------------------------- GL
 // ------------------------------------------------------- GL
 // ------------------------------------------------------- GL
 // ------------------------------------------------------- GL
 
-
-static int gamePaused = 0, game = 0;
-static int time = 0;
-static	int ended = 0;
-static GLfloat rot[16] = {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
 
 void	setMatrix()
 {
@@ -562,7 +786,7 @@ void	setMatrix()
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(degrees, (float) screenViewport[2] / screenViewport[3], 0.1, 10);
+    gluPerspective(FOV, (float) screenViewport[2] / screenViewport[3], Z_MIN, Z_MAX);
 	glMatrixMode(GL_MODELVIEW);
 	glPopMatrix();
 }
@@ -583,10 +807,11 @@ int		oglInit()
 	return 1;
 }
 
+
+
 int		gameInit(struct MINESWEEPER_MAP * map)
 {
 	int i;
-
 
 	GLint nbits[3];
 
@@ -608,7 +833,7 @@ int		gameInit(struct MINESWEEPER_MAP * map)
 	setMatrix();
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	glTranslatef (0, 0, -3.6f);
+	glTranslatef (0, 0, Z_VIEW);
 
 	gamePaused = game = 1;
 	ended = 0;
@@ -640,18 +865,6 @@ void	oglClose ()
 
 
 
-void	explosion ()
-{
-	int i;
-
-	// Scòppia
-	for (i = 0; i < mapGame->nPlaces; i++)
-		if (mapGame->place[i] & MAP_PLACE_MINE && !(mapGame->place[i] & MAP_PLACE_FLAG))
-			mapGame->place[i] &= ~(MAP_PLACE_COVERED);
-	ended = 1;
-}
-
-
 void	timerSet (int t)
 {
 	if (!ended)
@@ -660,141 +873,7 @@ void	timerSet (int t)
 
 
 
-static  int buttons = 0;
 
-int		mouseButton (UINT msg, int x, int y)
-{
-	int hit, k, n, err, flag, a;
-
-	if (ended)
-		return 0;
-
-	switch (msg) {
-	case WM_LBUTTONDOWN:
-		buttons |= 1;
-		return 0;
-
-	case WM_RBUTTONDOWN:
-		buttons |= 2;
-
-		hit = selectFace (x, y);
-		if (hit == -1)
-			return 0;
-		if (!(mapGame->place[hit] & MAP_PLACE_COVERED))
-			return 0;
-
-		if (mapGame->place[hit] & MAP_PLACE_FLAG)
-			mapGame->nMines++;
-		else
-			mapGame->nMines--;
-			
-		mapGame->place[hit] ^= MAP_PLACE_FLAG;
-		return 1;
-
-	case WM_LBUTTONUP:
-	case WM_RBUTTONUP:
-		
-		hit = selectFace (x, y);
-		if (hit == -1)
-			return 0;
-
-		if (msg == WM_LBUTTONUP && buttons == 1) {
-			buttons = 0;
-			if ((!(mapGame->place[hit] & MAP_PLACE_COVERED)) ||
-				mapGame->place[hit] & MAP_PLACE_FLAG) 
-				return 0;
-
-			if (mapGame->place[hit] & MAP_PLACE_MINE) {
-				explosion();
-				return 1;		
-			}
-			secureSweeper (hit);
-			return 1;
-		}
-		else if (msg == WM_RBUTTONUP && !(buttons & 1)) {
-			buttons &= ~2;
-			return 0;
-		}
-		else if (buttons == 3) {
-			// Proc. doppio tasto
-			buttons = 0;
-			n = mapGame->place[hit] & MAP_PLACE_NUMMASK;
-			if (mapGame->place[hit] & MAP_PLACE_COVERED || n == 0)
-				return 0;
-			
-			err = flag = 0;
-			for (k = 0; k < MAX_NEIGHBOURS && mapGame->neighbour[hit].n[k] != -1; k++) {
-				a = mapGame->place[mapGame->neighbour[hit].n[k]] & (MAP_PLACE_MINE | MAP_PLACE_FLAG);
-				if (a != 0 && a != (MAP_PLACE_MINE | MAP_PLACE_FLAG))
-					err++;
-				if (a & MAP_PLACE_FLAG)
-					flag++;
-			}
-			if (err == 0) {
-				k = -1;
-				while (k++, ((n = mapGame->neighbour[hit].n[k]) != -1) && k < MAX_NEIGHBOURS)
-					if (mapGame->place[n] & MAP_PLACE_COVERED && !(mapGame->place[n] & MAP_PLACE_FLAG)) 
-						secureSweeper (n);	
-				return 1;
-			}
-			else if (flag != n)
-				return 0;
-			// Esplode
-			explosion();
-			return 1;
-		}
-
-	default:
-		return 0;
-	}
-}
-
-
-
-
-
-
-void	mult (GLfloat * m1, GLfloat * m2, GLfloat * r)
-{
-	int i, j, k;
-	
-	for (i = 0; i < 4; i++)				// i riga
-		for (j = 0; j < 4; j++) {		// j colonna
-			r[i + j * 4] = 0;
-			for (k = 0; k < 4; k++)
-				r[i + j * 4] += m1[i + k * 4] * m2[j * 4 + k];
-		}
-}
-
-
-
-
-int		mouseMove(int dx, int dy)
-{
-	GLfloat x, y, cf, sf, ct, st;
-	static GLfloat rotxy[16], r[16];
-
-	y = (dy * 180.0f) / 222.0f / 360;
-	x = (dx * 180.0f) / 222.0f / 360;
-	
-	ct = (float)cos (x), st = (float)sin (x);
-	cf = (float)cos (y), sf = (float)sin (y);
-
-	rotxy[0] = ct, rotxy[1] = st*sf, rotxy[2] = -st*cf, rotxy[3] = 0;
-	rotxy[4] = 0, rotxy[5] = cf, rotxy[6] = sf, rotxy[7] = 0;
-	rotxy[8] = st, rotxy[9] = -sf*ct, rotxy[10] = ct*cf, rotxy[11] = 0;
-	rotxy[12] = 0, rotxy[13] = 0, rotxy[14] = 0, rotxy[15] = 1;
-
-	mult (rotxy, rot, r);
-
-	glLoadIdentity();
-	glTranslatef (0.0, 0.0, -3.6f);
-	glMultMatrixf (r);
-
-	memcpy (rot, r, sizeof (GLfloat) * 16);
-
-	return 1;
-}
 
 
 
