@@ -49,34 +49,71 @@ static struct MINESWEEPER_FACE cubeIndices[6] = {
 };
 
 
-void	buildIcosahedron (struct MINESWEEPER_MAP * map)
+BOOL	buildMap (struct MINESWEEPER_MAP * map, DWORD type)
 {
-	map->nPlaces = 20;
-	map->nVertexes = 12;
-	map->isConvex = TRUE;
-	map->cullingMode = GL_CW;
+	map->type = type;
+	map->isConvex = FALSE;
+
+	if (type == MAP_ICOSAHEDRON) {
+		map->nPlaces = 20;
+		map->nVertexes = 12;
 	
-	map->face = icoIndices;
-	map->vertex = icoVdata;
+		map->face = icoIndices;
+		map->vertex = icoVdata;
 	
-	map->place = NULL;
-	map->nMines = 0;
+		map->place = (int*) malloc (sizeof(int) * 20);
+	}
+	else if (type == MAP_CUBE) {
+		map->nPlaces = 6;
+		map->nVertexes = 8;
+	
+		map->face = cubeIndices;
+		map->vertex = cubeVdata;
+	
+		map->place = (int*) malloc (sizeof(int) * 6);
+	}
+	else
+		return FALSE;
+
+	return TRUE;
 }
 
 
-void	buildCube (struct MINESWEEPER_MAP * map)
+BOOL	preDestroyMap (struct MINESWEEPER_MAP * map)
 {
-	map->nPlaces = 6;
-	map->nVertexes = 8;
-	map->isConvex = TRUE;
-	map->cullingMode = GL_CW;
-	
-	map->face = cubeIndices;
-	map->vertex = cubeVdata;
-	
-	map->place = NULL;
-	map->nMines = 0;
+	if (map->type == MAP_ICOSAHEDRON || map->type == MAP_CUBE)
+		return TRUE;
+	return FALSE;
 }
+
+
+BOOL	destroyMap (struct MINESWEEPER_MAP * map)
+{
+	free (map->place);
+	map->place = NULL;
+	return TRUE;
+}
+
+
+
+
+
+
+
+
+
+
+void prepareMap (struct MINESWEEPER_MAP * map, int mines)
+{
+	int i;
+	
+	// Mette mine
+	for (i = 0; i < map->nPlaces; i++)
+		map->place[i] = PLACE_COVERED;
+}			
+
+
+
 
 
 

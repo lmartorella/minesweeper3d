@@ -250,12 +250,20 @@ WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst,
     hRC = wglCreateContext(hDC);
     wglMakeCurrent(hDC, hRC);
 
-	buildIcosahedron (&map);
-	//vinsFunction (&map);
-	//buildCube (&map);
-
-	if (!oglInit(map))
+	if (!buildMap (&map, MAP_ICOSAHEDRON)) {
+		MessageBox (hWnd, "Error building map", "Error", MB_OK);
 		return 1;
+	}
+
+	prepareMap (&map, 100);				// mette le mine
+
+	if (!oglInit(&map))
+		return 1;
+
+	if (!preDestroyMap (&map)) {
+		MessageBox (hWnd, "Error pre-destroying map", "Error", MB_OK);
+		return 1;
+	}
 
     ShowWindow(hWnd, nCmdShow);
 
@@ -265,6 +273,8 @@ WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst,
     }
 
 	oglClose();
+	
+	(void) destroyMap (&map);
 
     wglMakeCurrent(NULL, NULL);
     ReleaseDC(hWnd, hDC);

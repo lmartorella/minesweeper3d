@@ -6,9 +6,9 @@
 #define MAX_VERTEX_FACE 12
 
 
-
-#define PLACE_MINE	-1
-#define PLACE_CLEAR  0
+#define PLACE_COVERED	  -2
+#define PLACE_MINECOVERED -1
+#define PLACE_CLEAR       0
 
 
 struct	MINESWEEPER_VERTEX {
@@ -21,6 +21,9 @@ struct	MINESWEEPER_FACE {
 
 
 struct	MINESWEEPER_MAP {
+
+	// Discriminante
+		DWORD	type;
 
 	// Geometria
 		int		nPlaces;
@@ -42,7 +45,16 @@ struct	MINESWEEPER_MAP {
 		int		nMines;
 };
 
-extern void buildIcosahedron (struct MINESWEEPER_MAP * map);
-extern void	vinsFunction (struct MINESWEEPER_MAP * map);
-extern void buildCube (struct MINESWEEPER_MAP * map);
+
+
+
+#define	MAP_ICOSAHEDRON		1
+#define	MAP_CUBE		    2
+
+extern BOOL buildMap (struct MINESWEEPER_MAP * map, DWORD type);
+extern BOOL preDestroyMap (struct MINESWEEPER_MAP * map);
+extern BOOL destroyMap (struct MINESWEEPER_MAP * map);
+
+extern void prepareMap (struct MINESWEEPER_MAP * map, int mines);				
+
 

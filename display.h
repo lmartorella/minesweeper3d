@@ -6,6 +6,6 @@ extern void changeWindowSize(int width, int height);
 
 extern void	updateDisplay();
 
-extern BOOL	oglInit(struct MINESWEEPER_MAP map);
+extern BOOL	oglInit(struct MINESWEEPER_MAP * map);
 extern void	oglClose();
 

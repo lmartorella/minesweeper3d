@@ -4,7 +4,7 @@
 #include "map.h"
 
 
-#define __DEBUG_MAP_
+#undef __DEBUG_MAP_
 
 
 			/* current rotation */
@@ -144,7 +144,7 @@ static int texRows = 1, texColumns = 12;
 #define TEX_FLAG 0
 #define TEX_MINE 1
 #define TEX_NUMBER_BASE 1
-static GLuint * texName;
+static GLuint * texName = NULL;
 
 BOOL	buildTextures()
 {
@@ -267,7 +267,7 @@ struct	MAP_POLY {
 } mapPoly = {0, NULL, NULL, 0, NULL, NULL, NULL};
 
 
-BOOL	buildMap ()
+BOOL	buildStructure ()
 {
 	// Crea la MAP_POLY
 	int i, j, k, nvo;
@@ -402,7 +402,7 @@ void	freeMap ()
 
 #define MAX_HITBUFSIZE 512
 
-void		selectFace (int x, int y)
+int		selectFace (int x, int y)
 {
 	int i, j, p, hit, c;
 	static GLuint selectBuf[MAX_HITBUFSIZE];
@@ -421,7 +421,7 @@ void		selectFace (int x, int y)
     glLoadIdentity ();
     gluPickMatrix ((GLdouble) x, (GLdouble) (screenViewport[3] - y),
                     5.0, 5.0, screenViewport);
-    gluPerspective(60.0, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
+    gluPerspective(45.0, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
 
     glMatrixMode (GL_MODELVIEW);
 	glPushMatrix();
@@ -481,10 +481,7 @@ void		selectFace (int x, int y)
 		p += 4;
 	}
 
-	if (c == 0)
-		itoa (hit, message, 10);
-	else
-		strcpy (message, "NO");
+	return (c == 0) ? hit : -1;
 }
 
 
@@ -531,27 +528,27 @@ void		selectFace (int x, int y)
 
 
 
-BOOL	oglInit(struct MINESWEEPER_MAP map)
+BOOL	oglInit(struct MINESWEEPER_MAP * map)
 {
 	GLint nbits[3];
 
-	mapGame = &map;
+	mapGame = map;
 
 	// Cerca il numero di bit per colore disponibile
 	glGetIntegerv (GL_RED_BITS, nbits);
 	glGetIntegerv (GL_GREEN_BITS, nbits+1);
 	glGetIntegerv (GL_BLUE_BITS, nbits+2);
-	if ((1 << (nbits[0] + nbits[1] + nbits[2])) < map.nPlaces) {
+	if ((1 << (nbits[0] + nbits[1] + nbits[2])) < map->nPlaces) {
 	    MessageBox(NULL, "Impossible to build colormap (bitperpixel insufficient", 
 				   "Error", MB_OK);
 	    return FALSE;
 	}
 
-	if (!buildMap())
+	if (!buildStructure())
 		return FALSE;
 
-	if (map.isConvex) {
-		glFrontFace (map.cullingMode);
+	if (map->isConvex) {
+		glFrontFace (map->cullingMode);
 		glCullFace (GL_BACK);
 		glEnable (GL_CULL_FACE);
 	}
@@ -578,7 +575,7 @@ void	normalViewMode()
 {
 	glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(60.0, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
+    gluPerspective(45.0, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
 	glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glTranslatef(0.0f, 0.0f, -3.6f);
@@ -587,8 +584,16 @@ void	normalViewMode()
 
 BOOL	mouseButton (UINT msg, int x, int y)
 {
+	int hit;
+
 	if (msg == WM_LBUTTONDOWN) {
-		selectFace (x, y);
+		hit = selectFace (x, y);
+		if (hit == -1)
+			return FALSE;
+		if (mapGame->place[hit] == PLACE_MINECOVERED)
+			mapGame->place[hit] = PLACE_COVERED;
+		else
+			mapGame->place[hit] = PLACE_MINECOVERED;
 		return TRUE;
 	}
 	if (msg == WM_RBUTTONDOWN) {
@@ -633,10 +638,10 @@ void	changeWindowSize(int width, int height)
 
 void	updateDisplay()
 {
-	int i, j, p;
+	int i, j, p, idx;
 
-	glEnable (GL_TEXTURE_2D);
     glClearColor (0.1f, 0.2f, 0.3f, 0.0);
+
     if (mapGame->isConvex)
 		glClear(GL_COLOR_BUFFER_BIT);
 	else
@@ -650,20 +655,47 @@ void	updateDisplay()
 
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
 	
-	p = 0;
+	glColor3f (0,0,0);				// per linee
+	
 	if (mapPoly.nTri > 0) {
+
+		p = 0;
 		for (i = 0; i < mapPoly.nTri; i++) {
-			glBindTexture(GL_TEXTURE_2D, mapPoly.triIdx[i] % texColumns);
-			glBegin (GL_TRIANGLES);
-			glTexCoord2f (0,0);
+			glBegin (GL_LINE_STRIP);
 			glVertex3fv (mapPoly.triV + p);
-			glTexCoord2f (0.5,1);
 			glVertex3fv (mapPoly.triV + p + 3);
-			glTexCoord2f (1,0);
 			glVertex3fv (mapPoly.triV + p + 6);
 			glEnd();
 			p += 9;
 		}
+
+		p = 0;
+		for (i = 0; i < mapPoly.nTri; i++) {
+			idx = mapPoly.triIdx[i];
+			if (mapGame->place[idx] == PLACE_COVERED) {
+				glDisable (GL_TEXTURE_2D);
+				glColor3f (0.5, 0.5, 0.5);
+				glBegin (GL_TRIANGLES);
+				glVertex3fv (mapPoly.triV + p);
+				glVertex3fv (mapPoly.triV + p + 3);
+				glVertex3fv (mapPoly.triV + p + 6);
+				glEnd();
+			}
+			else {
+				glEnable (GL_TEXTURE_2D);
+				glBindTexture(GL_TEXTURE_2D, texName[TEX_FLAG]);
+				glBegin (GL_TRIANGLES);
+				glTexCoord2f (0,0);
+				glVertex3fv (mapPoly.triV + p);
+				glTexCoord2f (0.5,1);
+				glVertex3fv (mapPoly.triV + p + 3);
+				glTexCoord2f (1,0);
+				glVertex3fv (mapPoly.triV + p + 6);
+				glEnd();
+			}
+			p += 9;
+		}
+		glDisable (GL_TEXTURE_2D);
 	}
 
 	p = 0;
