@@ -148,8 +148,8 @@ int	prepareMap (int mines, int rebuild)
 
 	for (i = 0; i < mines; i++) {
 		do {
-			j = (int)ceil(((double)rand() / RAND_MAX) * map.nPlaces);
-		} while (map.place[j] & MAP_PLACE_MINE);
+			j = (int)(((double)(rand()) / RAND_MAX) * map.nPlaces);
+		} while (j < 0 || j >= map.nPlaces || map.place[j] & MAP_PLACE_MINE);
 		map.place[j] |= MAP_PLACE_MINE;
 	}
 

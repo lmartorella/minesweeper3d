@@ -11,6 +11,7 @@
 #define IDR_MENU1                       129
 #define IDD_HALLSOFFAME                 132
 #define IDD_RECORD                      133
+#define IDI_ICON1                       135
 #define IDC_VERSION                     1000
 #define IDC_PUN1                        1001
 #define IDC_PUN2                        1002
@@ -32,7 +33,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        134
+#define _APS_NEXT_RESOURCE_VALUE        136
 #define _APS_NEXT_COMMAND_VALUE         32780
 #define _APS_NEXT_CONTROL_VALUE         1006
 #define _APS_NEXT_SYMED_VALUE           101

@@ -181,6 +181,10 @@ SOURCE=.\WonDlg.h
 # PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
 # Begin Source File
 
+SOURCE=.\mainico.ico
+# End Source File
+# Begin Source File
+
 SOURCE=.\MineSweeper3D.rc
 # End Source File
 # Begin Source File

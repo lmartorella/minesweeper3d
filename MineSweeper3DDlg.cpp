@@ -176,6 +176,8 @@ BEGIN_MESSAGE_MAP(CMineSweeper3DDlg, CDialog)
 	ON_WM_MOUSEMOVE()
 	ON_WM_TIMER()
 	ON_COMMAND(IDM_FILTERING, OnFiltering)
+	ON_WM_RBUTTONDBLCLK()
+	ON_WM_LBUTTONDBLCLK()
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -459,6 +461,19 @@ void CMineSweeper3DDlg::OnSize(UINT nType, int cx, int cy)
 }
 
 
+void CMineSweeper3DDlg::OnRButtonDblClk(UINT nFlags, CPoint point) 
+{
+	if (gaming)
+		ButtonDown (WM_RBUTTONDOWN, nFlags, point);
+	CDialog::OnRButtonDblClk(nFlags, point);
+}
+
+void CMineSweeper3DDlg::OnLButtonDblClk(UINT nFlags, CPoint point) 
+{
+	if (gaming)
+		ButtonDown (WM_LBUTTONDOWN, nFlags, point);
+	CDialog::OnLButtonDblClk(nFlags, point);
+}
 
 void CMineSweeper3DDlg::OnLButtonDown(UINT nFlags, CPoint point) 
 {
@@ -699,3 +714,4 @@ void CMineSweeper3DDlg::OnFiltering()
 	if (!rebuildTextures())
 		exit (1);
 }
+

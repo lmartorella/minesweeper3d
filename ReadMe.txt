@@ -4,6 +4,11 @@ Free Distribution
 
 Please report bug/suggestion at lux@noinet.it
 
+New in 0.44:
+* Bugfix: poteva mancare una mina [ceil bug]
+* Bugfix: doppio clic destro [RDBLCK]
+* Aggiunta icona di applicazione
+
 New in 0.43:
 
 * Bugfix: dialog di record
