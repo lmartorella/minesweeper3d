@@ -100,11 +100,6 @@ SOURCE=.\map.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\MineSweeper3D.cpp
-# SUBTRACT CPP /YX /Yc /Yu
-# End Source File
-# Begin Source File
-
 SOURCE=.\MineSweeper3DDlg.cpp
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File

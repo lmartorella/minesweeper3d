@@ -10,11 +10,8 @@
 
 	/* device context */
 
-HDC		hDC;			
-
 
 static 	GLuint screenViewport [4];
-static  char message [256] = "0123456789";
 
 
 
@@ -160,6 +157,7 @@ int		buildTextures()
 	// Legge immagine
 	width = texColumns * (singleTexWidth + interleaveX);
 	height = texRows * (singleTexHeight + interleaveY);
+
 	buffer = malloc (width * height * 3);
 	file = fopen (texFileName, "rb");
 	if (file == NULL) {
@@ -191,7 +189,7 @@ int		buildTextures()
 
 			glTexImage2D (GL_TEXTURE_2D,
 				          0,
-						  GL_R3_G3_B2,
+						  GL_RGB,
 						  singleTexWidth,
 						  singleTexHeight,
 						  0,
@@ -199,9 +197,8 @@ int		buildTextures()
 						  GL_UNSIGNED_BYTE,
 			  			  buffer + width * 3 * (i * (singleTexHeight + interleaveY)) +
 			                j * 3 * (singleTexWidth + interleaveX));
-		}
+			}
 						  
-	
 	free (buffer);
 	return 1;
 }
@@ -418,16 +415,12 @@ int		selectFace (int x, int y)
     glInitNames();
     glPushName(0);
 
-	glPushMatrix();
     glMatrixMode (GL_PROJECTION);
 	glPushMatrix();
     glLoadIdentity ();
     gluPickMatrix ((GLdouble) x, (GLdouble) (screenViewport[3] - y),
                     2.0, 2.0, screenViewport);
     gluPerspective(degrees, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
-
-    glMatrixMode (GL_MODELVIEW);
-	glPopMatrix();
 
 	p = 0;
 	if (mapPoly.nTri > 0) {
@@ -453,11 +446,8 @@ int		selectFace (int x, int y)
 		glEnd();
 	}
 	
-	glPushMatrix();
-    glMatrixMode (GL_PROJECTION);
 	glPopMatrix();
     glMatrixMode (GL_MODELVIEW);
-	glPopMatrix();
 
 	glFlush ();
     hits = glRenderMode (GL_RENDER);
@@ -561,14 +551,44 @@ void	secureSweeper (int idx)
 // ------------------------------------------------------- GL
 
 
+static int gamePaused = 0, game = 0;
+static int time = 0;
+static	int ended = 0;
+static GLfloat rot[16] = {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
 
-
-int		oglInit(struct MINESWEEPER_MAP * map, HDC newhDC)
+void	setMatrix()
 {
-	GLint nbits[3];
+	glMatrixMode (GL_MODELVIEW);
+	glPushMatrix();
+	glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(degrees, (float) screenViewport[2] / screenViewport[3], 0.1, 10);
+	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
+}
 
-	mapGame = map;
-	hDC = newhDC;
+
+
+int		oglInit()
+{
+	glEnable (GL_DEPTH_TEST);
+
+	makeRasterFont();
+	if (!buildTextures())
+		return 0;
+
+	setMatrix();
+
+	game = 0;
+	return 1;
+}
+
+int		gameInit(struct MINESWEEPER_MAP * map)
+{
+	int i;
+
+
+	GLint nbits[3];
 
 	// Cerca il numero di bit per colore disponibile
 	glGetIntegerv (GL_RED_BITS, nbits);
@@ -580,32 +600,45 @@ int		oglInit(struct MINESWEEPER_MAP * map, HDC newhDC)
 	    return 0;
 	}
 
+	mapGame = map;
+
 	if (!buildStructure())
 		return 0;
 
-	glEnable (GL_DEPTH_TEST);
-
-	makeRasterFont();
-	if (!buildTextures())
-		return 0;
-
+	setMatrix();
 	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
 	glTranslatef (0, 0, -3.6f);
+
+	gamePaused = game = 1;
+	ended = 0;
+
+	for (i = 0; i < 16; i++)
+		rot[i] = 0;
+	rot[0] = rot[5] = rot[10] = rot[15] = 1;
 
 	return 1;
 }
 
 
-void	oglClose()
+void	gameClose()
+{
+	freeMap();
+	game = 0;
+}
+
+
+void	oglClose ()
 {
 	freeTextures();
-	freeMap();
 }
 
 
 
 
-static	int ended = 0;
+
+
+
 
 void	explosion ()
 {
@@ -616,6 +649,13 @@ void	explosion ()
 		if (mapGame->place[i] & MAP_PLACE_MINE && !(mapGame->place[i] & MAP_PLACE_FLAG))
 			mapGame->place[i] &= ~(MAP_PLACE_COVERED);
 	ended = 1;
+}
+
+
+void	timerSet (int t)
+{
+	if (!ended)
+		time = t;
 }
 
 
@@ -649,7 +689,6 @@ int		mouseButton (UINT msg, int x, int y)
 			mapGame->nMines--;
 			
 		mapGame->place[hit] ^= MAP_PLACE_FLAG;
-		itoa (mapGame->nMines, message, 10);
 		return 1;
 
 	case WM_LBUTTONUP:
@@ -684,7 +723,7 @@ int		mouseButton (UINT msg, int x, int y)
 				return 0;
 			
 			err = flag = 0;
-			for (k = 0; k < MAX_NEIGHBOURS; k++) {
+			for (k = 0; k < MAX_NEIGHBOURS && mapGame->neighbour[hit].n[k] != -1; k++) {
 				a = mapGame->place[mapGame->neighbour[hit].n[k]] & (MAP_PLACE_MINE | MAP_PLACE_FLAG);
 				if (a != 0 && a != (MAP_PLACE_MINE | MAP_PLACE_FLAG))
 					err++;
@@ -728,7 +767,6 @@ void	mult (GLfloat * m1, GLfloat * m2, GLfloat * r)
 }
 
 
-static GLfloat rot[16] = {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
 
 
 int		mouseMove(int dx, int dy)
@@ -749,20 +787,9 @@ int		mouseMove(int dx, int dy)
 
 	mult (rotxy, rot, r);
 
-	/*
-	memset (r, 0, sizeof (GLfloat) * 16);
-	r[0] = r[5] = r[10] = r[15] = 1.0f;
-	r[14] = -3.6f;
-	*/
-
 	glLoadIdentity();
 	glTranslatef (0.0, 0.0, -3.6f);
 	glMultMatrixf (r);
-
-	//glMultMatrixf (r);
-	//glRotatef (x, 1, 0, 0);
-	//glRotatef (y, 0, 1, 0);
-
 
 	memcpy (rot, r, sizeof (GLfloat) * 16);
 
@@ -777,12 +804,8 @@ void	changeWindowSize(int width, int height)
 	screenViewport[3] = height;
 
     glViewport(0, 0, (GLsizei) width, (GLsizei) height);
-	glPushMatrix();
-	glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(degrees, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
+
+	setMatrix();
 }
 
 
@@ -792,14 +815,36 @@ void	changeWindowSize(int width, int height)
 
 
 
+
+
+void	pause()
+{
+	gamePaused = 1;
+}
+
+
+void	unpause()
+{
+	gamePaused = 0;
+}
+
+
+
+
+
 void	updateDisplay()
 {
 	int i, j, p, idx, m;
+	char string[10];
 
     glClearColor (0.1f, 0.2f, 0.3f, 0.0);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	if (!game) {
+	    glFlush();
+		return;
+	}
 
 	/* ----------------- 3D mode ------------------ */
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
@@ -884,18 +929,29 @@ void	updateDisplay()
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();					// salva la 3d proj.
     glLoadIdentity();
-    glOrtho (0.0, screenViewport[2], 0.0, screenViewport[3], 0, 10.0f);
+    gluOrtho2D (0, screenViewport[2], 0, screenViewport[3]);
 
 	glColor3f(1,1,0);
+
 	glRasterPos2i(10, 10);
-	printString(message);
+	itoa (mapGame->nMines, string, 10);
+	printString(string);
+
+	glRasterPos2i(screenViewport[2] - 50, 10);
+	itoa (time / 10, string, 10);
+	printString(string);
+
+	// Puntatore
+	if (!gamePaused) {
+		glRasterPos2i (screenViewport[2] / 2 - 4, screenViewport[3] / 2 - 5);
+		printString ("0");
+	}
 
     glPopMatrix();					// ricaric. la 3d proj.
     glMatrixMode(GL_MODELVIEW);
 	glPopMatrix();
 
     glFlush();
-    SwapBuffers(hDC);				/* nop if singlebuffered */
 }
 
 

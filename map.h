@@ -51,7 +51,7 @@ struct	MINESWEEPER_MAP {
 
 
 
-
+#define MAP_NULL			0
 #define	MAP_NUPICOSAHEDRON	1
 #define	MAP_CUBE		    2
 

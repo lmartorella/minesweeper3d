@@ -13,9 +13,9 @@ Class2=CMineSweeper3DDlg
 Class3=CAboutDlg
 
 ResourceCount=4
-Resource1=IDD_ABOUTBOX
+Resource1=IDD_MINESWEEPER3D_DIALOG
 Resource2=IDR_MAINFRAME
-Resource3=IDD_MINESWEEPER3D_DIALOG
+Resource3=IDD_ABOUTBOX
 Resource4=IDR_MENU1
 
 [CLS:CMineSweeper3DApp]
@@ -55,8 +55,9 @@ ControlCount=0
 
 [MNU:IDR_MENU1]
 Type=1
+Class=?
 Command1=ID_FILE_NEWGAME
 Command2=ID_FILE_EXIT
-Command3=ID_HELP_ABOUT
+Command3=IDM_ABOUTBOX
 CommandCount=3
 

@@ -11,6 +11,69 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
+
+/////////////////////////////////////////////////////////////////////////////
+// CMineSweeper3DApp
+
+BEGIN_MESSAGE_MAP(CMineSweeper3DApp, CWinApp)
+	//{{AFX_MSG_MAP(CMineSweeper3DApp)
+		// NOTE - the ClassWizard will add and remove mapping macros here.
+		//    DO NOT EDIT what you see in these blocks of generated code!
+	//}}AFX_MSG
+	ON_COMMAND(ID_HELP, CWinApp::OnHelp)
+END_MESSAGE_MAP()
+
+/////////////////////////////////////////////////////////////////////////////
+// CMineSweeper3DApp construction
+
+CMineSweeper3DApp::CMineSweeper3DApp()
+{
+	// TODO: add construction code here,
+	// Place all significant initialization in InitInstance
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// The one and only CMineSweeper3DApp object
+
+CMineSweeper3DApp theApp;
+
+/////////////////////////////////////////////////////////////////////////////
+// CMineSweeper3DApp initialization
+
+BOOL CMineSweeper3DApp::InitInstance()
+{
+	// Standard initialization
+	// If you are not using these features and wish to reduce the size
+	//  of your final executable, you should remove from the following
+	//  the specific initialization routines you do not need.
+
+#ifdef _AFXDLL
+	Enable3dControls();			// Call this when using MFC in a shared DLL
+#else
+	Enable3dControlsStatic();	// Call this when linking to MFC statically
+#endif
+
+	CMineSweeper3DDlg dlg;
+	m_pMainWnd = &dlg;
+	int nResponse = dlg.DoModal();
+	if (nResponse == IDOK)
+	{
+		// TODO: Place code here to handle when the dialog is
+		//  dismissed with OK
+	}
+	else if (nResponse == IDCANCEL)
+	{
+		// TODO: Place code here to handle when the dialog is
+		//  dismissed with Cancel
+	}
+
+	// Since the dialog has been closed, return FALSE so that we exit the
+	//  application, rather than start the application's message pump.
+	return FALSE;
+}
+
+
+
 /////////////////////////////////////////////////////////////////////////////
 // CAboutDlg dialog used for App About
 
@@ -71,6 +134,12 @@ CMineSweeper3DDlg::CMineSweeper3DDlg(CWnd* pParent /*=NULL*/)
 
 	mx = my = 0;
 	mouseButtonState = 0;
+
+	map.type = MAP_NULL;
+	map.face = NULL;
+	map.neighbour = NULL;
+	map.place = NULL;
+	map.vertex = NULL;
 }
 
 void CMineSweeper3DDlg::DoDataExchange(CDataExchange* pDX)
@@ -83,16 +152,15 @@ void CMineSweeper3DDlg::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(CMineSweeper3DDlg, CDialog)
 	//{{AFX_MSG_MAP(CMineSweeper3DDlg)
-	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_WM_SIZE()
-	ON_WM_CHAR()
 	ON_WM_LBUTTONDOWN()
 	ON_WM_RBUTTONDOWN()
 	ON_WM_LBUTTONUP()
 	ON_WM_RBUTTONUP()
 	ON_WM_MOUSEMOVE()
+	ON_WM_TIMER()
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -112,10 +180,11 @@ bool	CMineSweeper3DDlg::PrepareOpenGL()
     pfd.nSize        = sizeof(pfd);
     pfd.nVersion     = 1;
     pfd.dwFlags      = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | 
-		               PFD_GENERIC_ACCELERATED | PFD_DOUBLEBUFFER;
+		               PFD_DOUBLEBUFFER;
     pfd.iPixelType   = PFD_TYPE_RGBA;
-    pfd.cDepthBits   = 32;
+    pfd.cDepthBits   = 16;
     pfd.cColorBits   = 16;
+	pfd.dwLayerMask	 = PFD_MAIN_PLANE;
 
     int pf = ChoosePixelFormat(hDC, &pfd);
     if (pf == 0) {
@@ -203,30 +272,11 @@ bool	CMineSweeper3DDlg::PrepareOpenGL()
 /////////////////////////////////////////////////////////////////////////////
 // CMineSweeper3DDlg message handlers
 
-static bool cursorSetting = false;
-
+#define EVENTTIMER 1
 
 BOOL CMineSweeper3DDlg::OnInitDialog()
 {
 	CDialog::OnInitDialog();
-
-	// Add "About..." menu item to system menu.
-
-	// IDM_ABOUTBOX must be in the system command range.
-	ASSERT((IDM_ABOUTBOX & 0xFFF0) == IDM_ABOUTBOX);
-	ASSERT(IDM_ABOUTBOX < 0xF000);
-
-	CMenu* pSysMenu = GetSystemMenu(FALSE);
-	if (pSysMenu != NULL)
-	{
-		CString strAboutMenu;
-		strAboutMenu.LoadString(IDS_ABOUTBOX);
-		if (!strAboutMenu.IsEmpty())
-		{
-			pSysMenu->AppendMenu(MF_SEPARATOR);
-			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
-		}
-	}
 
 	// Set the icon for this dialog.  The framework does this automatically
 	//  when the application's main window is not a dialog
@@ -243,34 +293,51 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
     hRC = wglCreateContext(pDC->m_hDC);
     wglMakeCurrent(pDC->m_hDC, hRC);
 
-	if (!buildMap (&map, MAP_NUPICOSAHEDRON, 3)) {
-		AfxMessageBox ("Error building map", MB_OK);
+	// Timer. In Windows 9x, il clock di sistema ha periodo di 55 ms circa. Per questo NON
+	// si può ottenere una frequenza di messaggi WM_TIMER superiore a circa 18.2 Hz.
+	// Windows NT e 2000 hanno la possibilità di scendere fino a 10 ms, ma scegliamo di
+	// mantenere la compatibilità.
+	if (!QueryPerformanceFrequency (&perfPeriod)) {
+		AfxMessageBox ("Performance Timer not supported by hardware", MB_OK);
 		exit (1);
 	}
+	QueryPerformanceCounter (&pauseCount);
+	lastPerfCount = pauseCount;
+	perfPeriod.QuadPart /= 10;			// decimi di secondo
+	gaming = false;
+	SetTimer (EVENTTIMER, 54, NULL);
 
-	if (!prepareMap (&map, 128)) {				// mette le mine
-		AfxMessageBox ("Too neighbour in map preparation", MB_OK);
-		exit (1);
-	}
+	cursorSetting = false;
 
-	if (!oglInit(&map, pDC->m_hDC))
-		exit (1);
+	oglInit();
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
-void CMineSweeper3DDlg::OnSysCommand(UINT nID, LPARAM lParam)
+
+void	CMineSweeper3DDlg::NewGame()
 {
-	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
-	{
-		CAboutDlg dlgAbout;
-		dlgAbout.DoModal();
+	gaming = false;
+	gameClose();
+	destroyMap (&map);
+
+	if (!buildMap (&map, MAP_NUPICOSAHEDRON, 2)) {
+		AfxMessageBox ("Error building map", MB_OK);
+		exit (1);
 	}
-	else
-	{
-		CDialog::OnSysCommand(nID, lParam);
+
+	if (!prepareMap (&map, 32)) {				// mette le mine
+		AfxMessageBox ("Too neighbour in map preparation", MB_OK);
+		exit (1);
 	}
+
+	if (!gameInit(&map))
+		exit (1);
+
+	PostMessage (WM_PAINT);
 }
+
+
 
 // If you add a minimize button to your dialog, you will need the code below
 //  to draw the icon.  For MFC applications using the document/view model,
@@ -296,8 +363,18 @@ void CMineSweeper3DDlg::OnPaint()
 		dc.DrawIcon(x, y, m_hIcon);
 	}
 	else {
+		// Conta i decimi di secondo.
+		if (gaming) {
+			LARGE_INTEGER li;
+
+			QueryPerformanceCounter (&li);
+			int c = int((li.QuadPart - lastPerfCount.QuadPart) / perfPeriod.QuadPart);
+			timerSet (c);
+		}
+
 	    static PAINTSTRUCT ps;
 		updateDisplay();
+	    SwapBuffers(pDC->m_hDC);				/* nop if singlebuffered */
 		BeginPaint(&ps);
 		EndPaint(&ps);
 	}
@@ -312,9 +389,12 @@ HCURSOR CMineSweeper3DDlg::OnQueryDragIcon()
 
 BOOL CMineSweeper3DDlg::DestroyWindow() 
 {
-	oglClose();
+	gaming = false;
+	gameClose();
 	destroyMap (&map);
-    wglMakeCurrent(NULL, NULL);
+	oglClose();
+
+	wglMakeCurrent(NULL, NULL);
     ReleaseDC(pDC);
     wglDeleteContext(hRC);
 
@@ -324,32 +404,32 @@ BOOL CMineSweeper3DDlg::DestroyWindow()
 	return CDialog::DestroyWindow();
 }
 
+
 void CMineSweeper3DDlg::OnSize(UINT nType, int cx, int cy) 
 {
 	CDialog::OnSize(nType, cx, cy);
 
-	// TODO: Add your message handler code here
 	RECT rect;
 	GetClientRect (&rect);
 	changeWindowSize(rect.right, rect.bottom);
 	PostMessage(WM_PAINT, 0, 0);
 
 	cursorSetting = true;
-	
-	GetWindowRect (&rect);
-	SetCursorPos ((rect.right + rect.left) / 2, (rect.top + rect.bottom) / 2);
 }
+
 
 
 void CMineSweeper3DDlg::OnLButtonDown(UINT nFlags, CPoint point) 
 {
-	ButtonDown (WM_LBUTTONDOWN, nFlags, point);
+	if (gaming)
+		ButtonDown (WM_LBUTTONDOWN, nFlags, point);
 	CDialog::OnLButtonDown(nFlags, point);
 }
 
 void CMineSweeper3DDlg::OnRButtonDown(UINT nFlags, CPoint point) 
 {
-	ButtonDown (WM_RBUTTONDOWN, nFlags, point);
+	if (gaming)
+		ButtonDown (WM_RBUTTONDOWN, nFlags, point);
 	CDialog::OnRButtonDown(nFlags, point);
 }
 
@@ -369,13 +449,17 @@ void CMineSweeper3DDlg::ButtonDown(DWORD button, UINT nFlags, CPoint point)
 
 void CMineSweeper3DDlg::OnLButtonUp(UINT nFlags, CPoint point) 
 {
-	ButtonUp (WM_LBUTTONUP, nFlags, point);
+	if (gaming)
+		ButtonUp (WM_LBUTTONUP, nFlags, point);
+	else 
+		StartGaming();
 	CDialog::OnLButtonUp(nFlags, point);
 }
 
 void CMineSweeper3DDlg::OnRButtonUp(UINT nFlags, CPoint point) 
 {
-	ButtonUp (WM_RBUTTONUP, nFlags, point);
+	if (gaming)
+		ButtonUp (WM_RBUTTONUP, nFlags, point);
 	CDialog::OnRButtonUp(nFlags, point);
 }
 
@@ -395,22 +479,110 @@ void CMineSweeper3DDlg::OnMouseMove(UINT nFlags, CPoint point)
 	static int x, y;
 	static CPoint p;
 
-	if (cursorSetting) {
-		GetCursorPos (&p);
-		x = p.x, y = p.y;	
-		cursorSetting = false;
-	}
-	else {
-		GetCursorPos (&p);
-		if ((x-p.x) != 0 || (y-p.y) != 0) {
-			if (mouseMove(x - p.x, y - p.y))
-				PostMessage(WM_PAINT, 0, 0);
-			else 
-				cursorSetting = true;
-			
-			SetCursorPos (x, y);
+	if (gaming)
+		if (cursorSetting) {
+			GetCursorPos (&p);
+			x = p.x, y = p.y;	
+			cursorSetting = false;
+		}
+		else {
+			GetCursorPos (&p);
+			if ((x-p.x) != 0 || (y-p.y) != 0) {
+				if (mouseMove(x - p.x, y - p.y))
+					PostMessage(WM_PAINT, 0, 0);
+				else 
+					cursorSetting = true;
+				
+				SetCursorPos (x, y);
 			}
-	}
+		}
+
 	CDialog::OnMouseMove(nFlags, point);
+}
+
+
+
+BOOL CMineSweeper3DDlg::OnCommand(WPARAM wParam, LPARAM lParam) 
+{
+	CAboutDlg * dlgAbout;
+	
+	switch (wParam) {
+	case IDM_ABOUTBOX:
+		dlgAbout = new CAboutDlg;
+		dlgAbout->DoModal();
+		delete (dlgAbout);
+		return TRUE;
+	case ID_FILE_EXIT:
+		PostQuitMessage(0);
+		return TRUE;
+	case ID_FILE_NEWGAME:
+		NewGame();
+	default:
+		return CDialog::OnCommand(wParam, lParam);
+	}
+}
+
+
+
+void CMineSweeper3DDlg::StartGaming()
+{
+	RECT rect;
+	POINT p;
+
+	// Coordinate schermo della finestra
+	GetClientRect (&rect);
+	p.x = rect.right / 2;
+	p.y = rect.bottom / 2;
+	ClientToScreen (&p);
+	SetCursorPos (p.x, p.y);
+	cursorSetting = true;
+
+	ShowCursor (FALSE);
+	unpause();
+
+	LARGE_INTEGER t;
+
+	QueryPerformanceCounter (&t);
+	t.QuadPart -= pauseCount.QuadPart;			// tempo di pausa
+	lastPerfCount.QuadPart += t.QuadPart;
+	gaming = true;
+}
+
+
+void CMineSweeper3DDlg::PauseGaming()
+{
+	QueryPerformanceCounter (&pauseCount);
+	gaming = false;
+	ShowCursor (TRUE);
+	pause();
+}
+
+
+
+BOOL CMineSweeper3DDlg::PreTranslateMessage(MSG* pMsg) 
+{
+	if (pMsg->message == WM_KEYDOWN || pMsg->message == WM_KEYUP) {
+		if (int(pMsg->wParam) == VK_ESCAPE && pMsg->message == WM_KEYUP) {
+			PauseGaming();
+			PostMessage(WM_PAINT, 0, 0);
+		}
+		return TRUE;
+	}
+	return CDialog::PreTranslateMessage(pMsg);
+}
+
+
+
+
+
+void CMineSweeper3DDlg::OnTimer(UINT nIDEvent) 
+{
+	if (nIDEvent != EVENTTIMER)
+		CDialog::OnTimer(nIDEvent);
+
+	if (!gaming)
+		return;
+
+	PostMessage (WM_PAINT);
 }
 

@@ -9,8 +9,16 @@ extern "C" {
 
 	void	updateDisplay();
 
-	int		oglInit(struct MINESWEEPER_MAP * map, HDC hDC);
-	void	oglClose();
+	int		gameInit(struct MINESWEEPER_MAP * map);
+	void	gameClose();
+
+	int		oglInit ();
+	void	oglClose ();
+
+	void	pause();
+	void	unpause();
+
+	void	timerSet(int t);
 }
 #else
 	extern int	mouseButton (UINT, int, int);
@@ -19,7 +27,15 @@ extern "C" {
 
 	extern void	updateDisplay();
 
-	extern int 	oglInit(struct MINESWEEPER_MAP * map, HDC hDC);
-	extern void	oglClose();
+	extern int 	gameInit(struct MINESWEEPER_MAP * map, HDC hDC);
+	extern void	gameClose();
+
+	extern int	oglInit ();
+	extern void	oglClose ();
+
+	extern void	pause();
+	extern void	unpause();
+
+	extern void	timerSet(int t);
 #endif
 

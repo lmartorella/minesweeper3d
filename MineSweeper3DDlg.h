@@ -26,8 +26,10 @@ public:
 	//{{AFX_VIRTUAL(CMineSweeper3DDlg)
 	public:
 	virtual BOOL DestroyWindow();
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
 	protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
+	virtual BOOL OnCommand(WPARAM wParam, LPARAM lParam);
 	//}}AFX_VIRTUAL
 
 // Implementation
@@ -42,7 +44,6 @@ protected:
 	// Generated message map functions
 	//{{AFX_MSG(CMineSweeper3DDlg)
 	virtual BOOL OnInitDialog();
-	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	afx_msg void OnSize(UINT nType, int cx, int cy);
@@ -51,14 +52,24 @@ protected:
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnRButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg void OnTimer(UINT nIDEvent);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 private:
+	void NewGame();
+	bool cursorSetting;
+	LARGE_INTEGER pauseCount;
+	LARGE_INTEGER perfPeriod;
+	LARGE_INTEGER lastPerfCount;
+	void StartGaming();
+	void PauseGaming();
+	bool gaming;
 	void ButtonUp (DWORD button, UINT nFlags, CPoint point);
 	UINT mouseButtonState;
 	int my;
 	int mx;
 	void ButtonDown (DWORD button, UINT nFlags, CPoint point);
+	
 };
 
 //{{AFX_INSERT_LOCATION}}
