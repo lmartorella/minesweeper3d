@@ -104,7 +104,7 @@ STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "You WIN!"
 FONT 8, "MS Sans Serif"
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,7,46,50,14
+    PUSHBUTTON      "OK",IDOK,7,46,50,14
     PUSHBUTTON      "Cancel",IDCANCEL,76,46,50,14
     LTEXT           "Enter your name:",IDC_STATIC,7,16,68,8
     EDITTEXT        IDC_EDIT1,81,13,45,14,ES_AUTOHSCROLL
@@ -209,7 +209,7 @@ IDR_MENU1 MENU DISCARDABLE
 BEGIN
     POPUP "&File"
     BEGIN
-        MENUITEM "&Restart Game",               ID_FILE_RESTARTGAME, GRAYED
+        MENUITEM "&Restart Game\tF2",           ID_FILE_RESTARTGAME, GRAYED
         POPUP "&New Game"
         BEGIN
             MENUITEM SEPARATOR
@@ -220,6 +220,10 @@ BEGIN
     POPUP "&Library"
     BEGIN
         POPUP "Select &Game type"
+        BEGIN
+            MENUITEM SEPARATOR
+        END
+        POPUP "Select &Renderer"
         BEGIN
             MENUITEM SEPARATOR
         END

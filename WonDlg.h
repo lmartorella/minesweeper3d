@@ -19,6 +19,7 @@ public:
 // Dialog Data
 	//{{AFX_DATA(CWonDlg)
 	enum { IDD = IDD_RECORD };
+	CEdit	m_edit;
 	CString	m_name;
 	//}}AFX_DATA
 
@@ -35,7 +36,7 @@ protected:
 
 	// Generated message map functions
 	//{{AFX_MSG(CWonDlg)
-		// NOTE: the ClassWizard will add member functions here
+	virtual BOOL OnInitDialog();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

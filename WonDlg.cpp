@@ -28,6 +28,7 @@ void CWonDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
 	//{{AFX_DATA_MAP(CWonDlg)
+	DDX_Control(pDX, IDC_EDIT1, m_edit);
 	DDX_Text(pDX, IDC_EDIT1, m_name);
 	//}}AFX_DATA_MAP
 }
@@ -35,9 +36,16 @@ void CWonDlg::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(CWonDlg, CDialog)
 	//{{AFX_MSG_MAP(CWonDlg)
-		// NOTE: the ClassWizard will add message map macros here
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
 // CWonDlg message handlers
+
+BOOL CWonDlg::OnInitDialog() 
+{
+	CDialog::OnInitDialog();
+
+	m_edit.SetFocus();
+	return FALSE;  // Focus specificato
+}

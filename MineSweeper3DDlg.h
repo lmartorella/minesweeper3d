@@ -32,9 +32,7 @@ public:
 protected:
 	HICON m_hIcon;
 
-    HGLRC				hRC;							// opengl context 
-	HPALETTE			hPalette;					/* custom palette (if needed) */
-	CDC			*		pDC;
+	CDC *	pDC;
 
 	// Generated message map functions
 	//{{AFX_MSG(CMineSweeper3DDlg)
@@ -51,27 +49,35 @@ protected:
 	afx_msg void OnFiltering();
 	afx_msg void OnRButtonDblClk(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
-	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
-	afx_msg void OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags);
 	afx_msg void OnFileRestartgame();
+	afx_msg void OnEffe2();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 private:
 	void Record();
+
 	void SelectDefaultGame();
-	DWORD PrepareOpenGL();
-	int oldGameTypePos;
+	void SelectDefaultGraphics();
+
 	void OnSelectGameType(DWORD id);
+	void OnSelectGraphType(DWORD id);
+	
+	int oldGameTypePos;
+	int oldGraphTypePos;
+
 	void LoadPlugins();
 	void OnOK();
+
 	void UpdateMapMenu();
 	void UpdateGameMenu();
+	void UpdateGraphMenu();
+	
 	bool poll;
 	void NewGame(DWORD map);
 	bool cursorSetting;
 
-	DWORD pauseCount;
 	DWORD lastPerfCount;
+	bool	firstClick;
 
 	LARGE_INTEGER lastFrameRendered;
 	LARGE_INTEGER minPeriodRefresh;

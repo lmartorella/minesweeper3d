@@ -15,11 +15,11 @@ extern "C" {
 	void	resetGame();
 	DWORD	newGame(DWORD code);
 
-	DWORD	oglInit ();
-	void	oglClose ();
+	DWORD	mine_init ();
+	void	mine_exit ();
 
-	void	pause();
-	void	unpause();
+	void	hideCrosshair();
+	void	showCrosshair();
 	void	timerSet(int t);
 
 	void	updateDisplay();
@@ -41,11 +41,11 @@ extern "C" {
 	extern void	resetGame();
 	extern DWORD newGame(DWORD code);
 
-	extern DWORD oglInit ();
-	extern void	oglClose ();
+	extern DWORD mine_init();
+	extern void	mine_exit();
 
-	extern void	pause();
-	extern void	unpause();
+	extern void	showCrosshair();
+	extern void	hideCrosshair();
 	extern void	timerSet(int t);
 	
 	extern void	updateDisplay();

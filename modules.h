@@ -36,13 +36,13 @@ struct	MINE_MODULE_MAPDESC {
 };
 
 
-struct	MINE_MODULE_GAMEDESC {
+struct	MINE_MODULE_STANDARDDESC {
 	char						moduleName[MINE_MODULE_NAMESIZE];
 	char						moduleFile[MINE_MODULE_FILENAMESIZE];
 	char						name [MINE_MODULE_NAMESIZE];
 	DWORD						code;
 
-	struct MINE_MODULE_GAMEDESC * next;
+	struct MINE_MODULE_STANDARDDESC * next;
 };
 
 
@@ -53,13 +53,15 @@ struct	MINE_MODULE_GAMEDESC {
 		DWORD		ReadLibrary (const char * const name);
 		void		DestroyDescriptorLists ();
 		DWORD		UpdateMapFunctions (DWORD code);
-		DWORD		SelectGameType (MINE_MODULE_GAMEDESC * game);
+		DWORD		SelectGameType (MINE_MODULE_STANDARDDESC * game);
+		DWORD		SelectGraphType (MINE_MODULE_STANDARDDESC * game);
 	}
 #else
 	extern DWORD		ReadLibrary (const char * const name);
 	extern void			DestroyDescriptorLists ();
 	extern DWORD		UpdateMapFunctions (DWORD code);
-	extern DWORD		SelectGameType (struct MINE_MODULE_GAMEDESC * game);
+	extern DWORD		SelectGameType (struct MINE_MODULE_STANDARDDESC * game);
+	extern DWORD		SelectGraphType (struct MINE_MODULE_STANDARDDESC * game);
 #endif
 
 

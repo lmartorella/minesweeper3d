@@ -46,14 +46,14 @@
 #define ID_FILE_RESTARTGAME             32781
 #define ID_NEWMAP_GAME                  0xc000
 #define ID_GAMETYPE                     0xc800
-#define ID_TEXTYPE                      0xd000
+#define ID_GRAPHTYPE                    0xc900
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        137
-#define _APS_NEXT_COMMAND_VALUE         32785
+#define _APS_NEXT_RESOURCE_VALUE        138
+#define _APS_NEXT_COMMAND_VALUE         32786
 #define _APS_NEXT_CONTROL_VALUE         1008
 #define _APS_NEXT_SYMED_VALUE           103
 #endif

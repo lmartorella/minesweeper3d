@@ -28,6 +28,11 @@ extern	GETTEXTURENAME_TYPE		p_GetTextureName;
 extern	PREPARETEXTURES_TYPE	p_PrepareTextures;
 extern	FREETEXTURES_TYPE		p_FreeTextures;
 
+// Grafica
+		PREPAREOPENGL_TYPE		p_PrepareOpenGL;
+		UNPREPAREOPENGL_TYPE	p_UnprepareOpenGL;
+
+
 extern	struct RECORD *			recordArray;
 
 // WINDOWS SPECIFIC
@@ -49,7 +54,7 @@ MINE_FUNCTION_DEFAULT GetFunctionAddress (MINE_MODULE module, const char * const
 
 static	int		mapCode = ID_NEWMAP_GAME;
 static	int		gametypeCode = ID_GAMETYPE;
-static	int		textypeCode = ID_TEXTYPE;
+static	int		graphCode = ID_GRAPHTYPE;
 
 //--------------------------------------------------------------------
 //--------------------------------------------------------------------
@@ -61,9 +66,11 @@ static	int		textypeCode = ID_TEXTYPE;
 
 
 struct	MINE_MODULE_MAPDESC * mapDescriptorList = NULL;
-struct	MINE_MODULE_GAMEDESC * gameDescriptorList = NULL;
+struct	MINE_MODULE_STANDARDDESC * gameDescriptorList = NULL;
+struct	MINE_MODULE_STANDARDDESC * graphDescriptorList = NULL;
 MINE_MODULE		mapModuleOpened = MINE_MODULE_INVALID;
 MINE_MODULE		gameModuleOpened = MINE_MODULE_INVALID;
+MINE_MODULE		graphModuleOpened = MINE_MODULE_INVALID;
 
 
 
@@ -71,7 +78,8 @@ DWORD	ReadLibrary (const char * const name)
 {
 	struct MINE_MODULE_INFO info;
 	struct MINE_MODULE_MAPDESC * mapDesc;
-	struct MINE_MODULE_GAMEDESC * gameDesc;
+	struct MINE_MODULE_STANDARDDESC * gameDesc;
+	struct MINE_MODULE_STANDARDDESC * graphDesc;
 	unsigned int ver, i;
 	
 	// Funzioni
@@ -90,6 +98,10 @@ DWORD	ReadLibrary (const char * const name)
 	GETTEXTURENAME_TYPE GetTextureName;
 	PREPARETEXTURES_TYPE PrepareTextures;
 	FREETEXTURES_TYPE FreeTextures;
+
+	GETGRAPHNAME_TYPE		GetGraphName;
+	PREPAREOPENGL_TYPE		PrepareOpenGL;
+	UNPREPAREOPENGL_TYPE	UnprepareOpenGL;
 
 	MINE_MODULE	module = OpenFileLib (name);
 	if (module == MINE_MODULE_INVALID) 
@@ -159,7 +171,7 @@ DWORD	ReadLibrary (const char * const name)
 			return IDS_MODULE_INVALIDGAMEMOD;
 
 		// Gametype ok
-		gameDesc = (struct MINE_MODULE_GAMEDESC*)malloc(sizeof (struct MINE_MODULE_GAMEDESC));
+		gameDesc = (struct MINE_MODULE_STANDARDDESC*)malloc(sizeof (struct MINE_MODULE_STANDARDDESC));
 		strncpy (gameDesc->moduleName, info.name, MINE_MODULE_NAMESIZE);
 		strcpy (gameDesc->moduleFile, name); 
 
@@ -168,6 +180,30 @@ DWORD	ReadLibrary (const char * const name)
 		gameDescriptorList = gameDesc;
 
 		gameDesc->code = gametypeCode++;
+	}
+
+	
+	// E' una libreria grafica?
+	generic = GetFunctionAddress (module, "GetGraphicsName");
+	if (generic != MINE_MODULE_INVALID) {
+
+		GetGraphName = (GETGRAPHNAME_TYPE) generic;
+		PrepareOpenGL = (PREPAREOPENGL_TYPE) GetFunctionAddress (module, "PrepareOpenGL");
+		UnprepareOpenGL = (UNPREPAREOPENGL_TYPE) GetFunctionAddress (module, "UnprepareOpenGL");
+
+		if (PrepareOpenGL == MINE_MODULE_INVALID || UnprepareOpenGL == MINE_MODULE_INVALID) 
+			return IDS_MODULE_INVALIDGAMEMOD;
+
+		// Graphics ok
+		graphDesc = (struct MINE_MODULE_STANDARDDESC*)malloc(sizeof (struct MINE_MODULE_STANDARDDESC));
+		strncpy (graphDesc->moduleName, info.name, MINE_MODULE_NAMESIZE);
+		strcpy (graphDesc->moduleFile, name); 
+
+		GetGraphName (graphDesc->name);
+		graphDesc->next = graphDescriptorList;
+		graphDescriptorList = graphDesc;
+
+		graphDesc->code = graphCode++;
 	}
 
 	CloseFileLib (module);
@@ -180,7 +216,8 @@ DWORD	ReadLibrary (const char * const name)
 void	DestroyDescriptorLists ()
 {
 	struct MINE_MODULE_MAPDESC * map = mapDescriptorList;
-	struct MINE_MODULE_GAMEDESC * game = gameDescriptorList;
+	struct MINE_MODULE_STANDARDDESC * game = gameDescriptorList;
+	struct MINE_MODULE_STANDARDDESC * graph = graphDescriptorList;
 
 	while (map != NULL) {
 		map = map->next;
@@ -192,9 +229,15 @@ void	DestroyDescriptorLists ()
 		free (gameDescriptorList);
 		gameDescriptorList = game;
 	}
+	while (graph != NULL) {
+		graph = graph->next;
+		free (graphDescriptorList);
+		graphDescriptorList = graph;
+	}
 	
 	mapDescriptorList = NULL;
 	gameDescriptorList = NULL;
+	graphDescriptorList = NULL;
 }
 
 
@@ -238,7 +281,9 @@ DWORD	UpdateMapFunctions (DWORD code)
 }
 
 
-DWORD	SelectGameType (struct MINE_MODULE_GAMEDESC * game)
+
+
+DWORD	SelectGameType (struct MINE_MODULE_STANDARDDESC * game)
 {
 	if (gameModuleOpened != MINE_MODULE_INVALID)
 		CloseFileLib (gameModuleOpened);
@@ -256,5 +301,22 @@ DWORD	SelectGameType (struct MINE_MODULE_GAMEDESC * game)
 	return rebuildTextures(); 
 }
 
+
+
+
+DWORD	SelectGraphType (struct MINE_MODULE_STANDARDDESC * graph)
+{
+	if (graphModuleOpened != MINE_MODULE_INVALID)
+		CloseFileLib (graphModuleOpened);
+
+	graphModuleOpened = OpenFileLib (graph->moduleFile);
+	if (graphModuleOpened == MINE_MODULE_INVALID)
+		return 0;
+
+	p_PrepareOpenGL = (PREPAREOPENGL_TYPE) GetFunctionAddress (gameModuleOpened, "PrepareOpenGL");
+	p_UnprepareOpenGL = (UNPREPAREOPENGL_TYPE) GetFunctionAddress (gameModuleOpened, "UnprepareOpenGL");
+
+	return 0; 
+}
 
 

@@ -5,8 +5,9 @@
 #include "modules.h"
 
 
-#define CFGFILE_VER 0x304
+#define CFGFILE_VER 0x305
 #define STANDARD_GAME "minesw/original/standard"
+#define STANDARD_GRAPH "minesw/original/standard"
 
 
 struct	RECORD {
@@ -28,6 +29,7 @@ struct	MINE_VARS_MAPRECORD {
 struct	GLOBAL_VARS {
 	int						nMapModules;
 	char					gameSelected [MINE_MODULE_NAMESIZE];
+	char					graphSelected [MINE_MODULE_NAMESIZE];
 	int						filtering;
 	struct MINE_VARS_MAPRECORD *	records; 
 };

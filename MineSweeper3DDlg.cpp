@@ -25,7 +25,8 @@ extern "C" {
 	
 	extern MINESWEEPER_MAP map;
 	extern MINE_MODULE_MAPDESC * mapDescriptorList;
-	extern MINE_MODULE_GAMEDESC * gameDescriptorList;
+	extern MINE_MODULE_STANDARDDESC * gameDescriptorList;
+	extern MINE_MODULE_STANDARDDESC * graphDescriptorList;
 
 	extern	int						mapIndex;
 	extern	BUILDMAP_TYPE			p_BuildMap;
@@ -35,6 +36,9 @@ extern "C" {
 	extern	RESETMAP_TYPE			p_ResetMap;
 
 	extern	MOUSEMOVE_TYPE			p_MouseMove;
+
+	extern	PREPAREOPENGL_TYPE		p_PrepareOpenGL;
+	extern	UNPREPAREOPENGL_TYPE	p_UnprepareOpenGL;
 
 	extern  int gameStatus; 
 	extern	unsigned int timer;
@@ -186,102 +190,9 @@ BEGIN_MESSAGE_MAP(CMineSweeper3DDlg, CDialog)
 	ON_COMMAND(IDM_FILTERING, OnFiltering)
 	ON_WM_RBUTTONDBLCLK()
 	ON_WM_LBUTTONDBLCLK()
-	ON_WM_KEYDOWN()
-	ON_WM_KEYUP()
 	ON_COMMAND(ID_FILE_RESTARTGAME, OnFileRestartgame)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
-
-
-
-
-DWORD	CMineSweeper3DDlg::PrepareOpenGL()
-{
-	CDC * pDC = GetDC();
-	HDC hDC = pDC->m_hDC;
-
-    PIXELFORMATDESCRIPTOR pfd;
-
-    memset(&pfd, 0, sizeof(pfd));
-    pfd.nSize        = sizeof(pfd);
-    pfd.nVersion     = 1;
-    pfd.dwFlags      = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL /*| PFD_GENERIC_ACCELERATED */| 
-		               PFD_DOUBLEBUFFER;
-    pfd.iPixelType   = PFD_TYPE_RGBA;
-    pfd.cDepthBits   = 16;
-    pfd.cColorBits   = 16;
-	pfd.dwLayerMask	 = PFD_MAIN_PLANE;
-
-    int pf = ChoosePixelFormat(hDC, &pfd);
-    if (pf == 0) 
-		return IDS_OPENGL_CHOOSEPIXELFORMAT;
- 
-    if (SetPixelFormat(hDC, pf, &pfd) == FALSE) 
-		return IDS_OPENGL_SETPIXELFORMAT;
-
-    DescribePixelFormat(hDC, pf, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
-
-    LOGPALETTE* lpPal;
-
-    if (pfd.dwFlags & PFD_NEED_PALETTE ||
-	pfd.iPixelType == PFD_TYPE_COLORINDEX) {
-
-		int n = 1 << pfd.cColorBits;
-		if (n > 256) n = 256;
-
-		lpPal = (LOGPALETTE*)malloc(sizeof(LOGPALETTE) +
-					    sizeof(PALETTEENTRY) * n);
-		memset(lpPal, 0, sizeof(LOGPALETTE) + sizeof(PALETTEENTRY) * n);
-		lpPal->palVersion = 0x300;
-		lpPal->palNumEntries = n;
-
-		GetSystemPaletteEntries(hDC, 0, n, &lpPal->palPalEntry[0]);
-    
-		if (pfd.iPixelType == PFD_TYPE_RGBA) {
-		    int redMask = (1 << pfd.cRedBits) - 1;
-		    int greenMask = (1 << pfd.cGreenBits) - 1;
-		    int blueMask = (1 << pfd.cBlueBits) - 1;
-		    int i;
-
-			for (i = 0; i < n; ++i) {
-				lpPal->palPalEntry[i].peRed = 
-				    (((i >> pfd.cRedShift)   & redMask)   * 255) / redMask;
-				lpPal->palPalEntry[i].peGreen = 
-				    (((i >> pfd.cGreenShift) & greenMask) * 255) / greenMask;
-				lpPal->palPalEntry[i].peBlue = 
-				    (((i >> pfd.cBlueShift)  & blueMask)  * 255) / blueMask;
-				lpPal->palPalEntry[i].peFlags = 0;
-			}
-		} else {
-		    lpPal->palPalEntry[0].peRed = 0;
-		    lpPal->palPalEntry[0].peGreen = 0;
-		    lpPal->palPalEntry[0].peBlue = 0;
-		    lpPal->palPalEntry[0].peFlags = PC_NOCOLLAPSE;
-		    lpPal->palPalEntry[1].peRed = 255;
-		    lpPal->palPalEntry[1].peGreen = 0;
-		    lpPal->palPalEntry[1].peBlue = 0;
-		    lpPal->palPalEntry[1].peFlags = PC_NOCOLLAPSE;
-		    lpPal->palPalEntry[2].peRed = 0;
-		    lpPal->palPalEntry[2].peGreen = 255;
-		    lpPal->palPalEntry[2].peBlue = 0;
-		    lpPal->palPalEntry[2].peFlags = PC_NOCOLLAPSE;
-		    lpPal->palPalEntry[3].peRed = 0;
-		    lpPal->palPalEntry[3].peGreen = 0;
-		    lpPal->palPalEntry[3].peBlue = 255;
-		    lpPal->palPalEntry[3].peFlags = PC_NOCOLLAPSE;
-		}
-
-		hPalette = CreatePalette(lpPal);
-		if (hPalette) {
-		    SelectPalette(hDC, hPalette, FALSE);
-		    RealizePalette(hDC);
-		}
-		free(lpPal);
-    }
-
-    ReleaseDC(pDC);
-	return 0;
-}
 
 
 
@@ -312,11 +223,12 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 	}
 
 	SelectDefaultGame();
-
+	SelectDefaultGraphics();
 
 	srand (time(NULL));
 
-	err = PrepareOpenGL();
+	pDC = GetDC();
+	err = p_PrepareOpenGL(pDC->m_hDC);
     if (err) {
 		CString e;
 		e.LoadString (err);
@@ -324,9 +236,6 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 		exit (1);
 	}
 
-	pDC = GetDC();
-    hRC = wglCreateContext(pDC->m_hDC);
-    wglMakeCurrent(pDC->m_hDC, hRC);
 
 	LARGE_INTEGER perfPeriod;
 	if (!QueryPerformanceFrequency (&perfPeriod)) {
@@ -343,7 +252,7 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 	cursorSetting = false;
 	poll = false;
 
-	err = oglInit();
+	err = mine_init();
 	if (err) {
 		CString e;
 		e.LoadString (err);
@@ -419,6 +328,9 @@ HCURSOR CMineSweeper3DDlg::OnQueryDragIcon()
 	return (HCURSOR) m_hIcon;
 }
 
+
+
+
 BOOL CMineSweeper3DDlg::DestroyWindow() 
 {
 	DWORD err = StoreSettings();
@@ -430,15 +342,10 @@ BOOL CMineSweeper3DDlg::DestroyWindow()
 
 	gaming = false;
 	gameClose(1);
-	//destroyMap();
-	oglClose();
+	mine_exit();
 
-	wglMakeCurrent(NULL, NULL);
+	p_UnprepareOpenGL (pDC->m_hDC);
     ReleaseDC(pDC);
-    wglDeleteContext(hRC);
-
-    if (hPalette)
-		DeleteObject(hPalette);
 	DestroyDescriptorLists ();
 	
 	return CDialog::DestroyWindow();
@@ -502,13 +409,14 @@ void CMineSweeper3DDlg::ButtonDown(DWORD button, UINT nFlags, CPoint point)
 	if (processMouseButton (button, mx, my, &unlock))
 		PostMessage(WM_PAINT, 0, 0);
 
-	if (gameStatus == GAME_STATUS_ENDED_WINRECORD) 
-		Record();
-
 	if (unlock) {
 		PauseGaming();
 		PostMessage (WM_PAINT);
 	}
+
+	if (gameStatus == GAME_STATUS_ENDED_WINRECORD) 
+		Record();
+
 }
 
 
@@ -536,12 +444,12 @@ void CMineSweeper3DDlg::ButtonUp(DWORD button, UINT nFlags, CPoint point)
 	mouseButtonState = 0;
 	if (processMouseButton (button, point.x, point.y, &unlock))
 		PostMessage(WM_PAINT, 0, 0);
-	if (gameStatus == GAME_STATUS_ENDED_WINRECORD) 
-		Record();
 	if (unlock) {
 		PauseGaming();
 		PostMessage (WM_PAINT);
 	}
+	if (gameStatus == GAME_STATUS_ENDED_WINRECORD) 
+		Record();
 }
 
 
@@ -640,8 +548,9 @@ int FindMenuItem(CMenu* Menu, DWORD command)
 
 void	CMineSweeper3DDlg::NewGame (DWORD code)
 {
-	gaming = false;
 	mapReady = false;
+	gaming = false;
+	PauseGaming();
 
 	DWORD err = newGame (code);
 	if (err) {
@@ -655,8 +564,8 @@ void	CMineSweeper3DDlg::NewGame (DWORD code)
 	p_ResetMap (mapIndex);
 	p_MouseMove (mapIndex, 0, 0);
 
-	lastPerfCount = pauseCount = GetTickCount ();
 	lastFrameRendered.QuadPart = 0;
+	firstClick = false;
 
 	RECT rect;
 	GetClientRect (&rect);
@@ -687,6 +596,7 @@ void CMineSweeper3DDlg::OnFileRestartgame()
 }
 
 
+
 void CMineSweeper3DDlg::StartGaming()
 {
 	RECT rect;
@@ -702,23 +612,24 @@ void CMineSweeper3DDlg::StartGaming()
 
 	ClientToScreen (&rect);
 	ClipCursor (&rect);
-	ShowCursor (FALSE);
-	unpause();
+	while (ShowCursor (FALSE) >= 0);
+	showCrosshair();
 
-	DWORD t = GetTickCount ();
-	t -= pauseCount;							// tempo di pausa
-	lastPerfCount += t;
+	if (!firstClick) {
+		lastPerfCount = GetTickCount ();
+		firstClick = true;
+	}
 	gaming = true;
 }
 
 
 void CMineSweeper3DDlg::PauseGaming()
 {
-	pauseCount = GetTickCount();
 	gaming = false;
 	ClipCursor (NULL);
-	ShowCursor (TRUE);
-	pause();
+	while (ShowCursor (TRUE) < 0);
+	hideCrosshair();
+	PostMessage(WM_PAINT, 0, 0);
 }
 
 
@@ -729,6 +640,10 @@ BOOL CMineSweeper3DDlg::PreTranslateMessage(MSG* pMsg)
 		if (int(pMsg->wParam) == VK_ESCAPE && pMsg->message == WM_KEYUP) {
 			PauseGaming();
 			PostMessage(WM_PAINT, 0, 0);
+		}
+		else if (int(pMsg->wParam) == VK_F2 && pMsg->message == WM_KEYDOWN) {
+			if (map.code)
+				NewGame (map.code);	
 		}
 		return TRUE;
 	}
@@ -822,7 +737,7 @@ void CMineSweeper3DDlg::UpdateGameMenu()
 
 	while (menu->DeleteMenu(0, MF_BYPOSITION) != 0);
 
-	MINE_MODULE_GAMEDESC * p = gameDescriptorList;
+	MINE_MODULE_STANDARDDESC * p = gameDescriptorList;
 	while (p != NULL) { 
 		menu->AppendMenu (MF_STRING, p->code, p->name);
 		p = p->next;
@@ -832,21 +747,28 @@ void CMineSweeper3DDlg::UpdateGameMenu()
 
 
 
+void CMineSweeper3DDlg::UpdateGraphMenu()
+{
+	// Aggiorna voci del menu
+	CMenu * menu = GetMenu ();
+	int f = FindMenuItem (menu, "&Library");
+	menu = menu->GetSubMenu(f);
+	f = FindMenuItem (menu, "Select &Renderer");
+	menu = menu->GetSubMenu(f);
+
+	while (menu->DeleteMenu(0, MF_BYPOSITION) != 0);
+
+	MINE_MODULE_STANDARDDESC * p = graphDescriptorList;
+	while (p != NULL) { 
+		menu->AppendMenu (MF_STRING, p->code, p->name);
+		p = p->next;
+	}
+}
+
+
+
 void CMineSweeper3DDlg::OnOK()
 {
-}
-
-
-void CMineSweeper3DDlg::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) 
-{
-	if (nChar != VK_ESCAPE)	
-		CDialog::OnKeyDown(nChar, nRepCnt, nFlags);
-}
-
-void CMineSweeper3DDlg::OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags) 
-{
-	if (nChar != VK_ESCAPE)	
-		CDialog::OnKeyUp(nChar, nRepCnt, nFlags);
 }
 
 
@@ -877,9 +799,10 @@ void CMineSweeper3DDlg::LoadPlugins()
 	// Ok, liste aggiornate.
 	// Aggiornamento menu mappa
 	UpdateMapMenu();
-
 	// Aggiornamento lista games
 	UpdateGameMenu();
+	// Aggiornamento lista graphics
+	UpdateGraphMenu();
 }
 
 
@@ -894,7 +817,7 @@ void CMineSweeper3DDlg::SelectDefaultGame()
 	f = FindMenuItem (menu, "Select &Game type");
 	menu = menu->GetSubMenu(f);
 
-	MINE_MODULE_GAMEDESC * desc = gameDescriptorList;
+	MINE_MODULE_STANDARDDESC * desc = gameDescriptorList;
 	while (desc != NULL && strcmp (desc->moduleName, vars.gameSelected))
 		desc = desc->next; 
 	if (desc == NULL) {
@@ -920,10 +843,48 @@ void CMineSweeper3DDlg::SelectDefaultGame()
 
 
 
+
+void CMineSweeper3DDlg::SelectDefaultGraphics()
+{
+	// Selezione plugin predefinito
+	CMenu * menu = GetMenu ();
+	int f = FindMenuItem (menu, "&Library");
+	menu = menu->GetSubMenu(f);
+	f = FindMenuItem (menu, "Select &Renderer");
+	menu = menu->GetSubMenu(f);
+
+	MINE_MODULE_STANDARDDESC * desc = graphDescriptorList;
+	while (desc != NULL && strcmp (desc->moduleName, vars.graphSelected))
+		desc = desc->next; 
+	if (desc == NULL) {
+		// Carica default.
+		desc = graphDescriptorList;
+		while (desc != NULL && strcmp (desc->moduleName, STANDARD_GRAPH))
+			desc = desc->next; 
+		if (desc == NULL) {
+			CString e;
+			e.LoadString (IDS_MAIN_STANDARDLIBRARY);
+			AfxMessageBox(e, MB_OK | MB_ICONSTOP);
+			exit (1);
+		}
+		strcpy (vars.graphSelected, STANDARD_GRAPH);
+	}
+
+	f = FindMenuItem (menu, desc->name);
+
+	menu->CheckMenuItem (f, MF_BYPOSITION | MF_CHECKED);
+	oldGraphTypePos = f;
+	OnSelectGraphType (menu->GetMenuItemID (f));
+}
+
+
+
+
+
 void CMineSweeper3DDlg::OnSelectGameType(DWORD id)
 {
 	// Well, find game type, open Library and set-up functions!
-	MINE_MODULE_GAMEDESC * p = gameDescriptorList;
+	MINE_MODULE_STANDARDDESC * p = gameDescriptorList;
 	while (p != NULL) { 
 		if (p->code == id)
 			break;
@@ -961,6 +922,46 @@ void CMineSweeper3DDlg::OnSelectGameType(DWORD id)
 
 
 
+void CMineSweeper3DDlg::OnSelectGraphType(DWORD id)
+{
+	// Well, find game type, open Library and set-up functions!
+	MINE_MODULE_STANDARDDESC * p = graphDescriptorList;
+	while (p != NULL) { 
+		if (p->code == id)
+			break;
+		p = p->next;
+	}
+	if (p == NULL)
+		return;					// Nulla di fatto.
+	strcpy (vars.graphSelected, p->moduleName);
+
+	DWORD err = SelectGraphType (p);
+	if (err) {
+		CString e;
+		e.LoadString (err);
+		AfxMessageBox (e, MB_OK | MB_ICONSTOP);
+		exit (1);
+	}
+
+	CMenu * menu = GetMenu ();
+	int f = FindMenuItem (menu, "&Library");
+	menu = menu->GetSubMenu(f);
+	f = FindMenuItem (menu, "Select &Renderer");
+	menu = menu->GetSubMenu(f);
+	f = FindMenuItem (menu, id);
+	if (f == -1) {
+		CString e;
+		e.LoadString (IDS_MAIN_MENUITEMS);
+		AfxMessageBox(e);
+		exit (1);
+	}
+
+	menu->CheckMenuItem (oldGraphTypePos, MF_BYPOSITION | MF_UNCHECKED);
+	menu->CheckMenuItem (f, MF_BYPOSITION | MF_CHECKED);
+	oldGraphTypePos = f;
+}
+
+
 
 
 void CMineSweeper3DDlg::Record()
@@ -977,3 +978,5 @@ void CMineSweeper3DDlg::Record()
 
 	gameStatus = GAME_STATUS_ENDED_WIN;
 }
+
+

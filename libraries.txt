@@ -57,7 +57,7 @@ MODULE VERSION 1.0
  * A) MODULO MAPPA
  *****************************************************************************************
 
-Da implementare tutte le seguenti funzioni:
+Da implementare TUTTE le seguenti funzioni:
 
 	void	GetMapCount (int * count [OUT]);					
 			
@@ -159,6 +159,8 @@ Da implementare tutte le seguenti funzioni:
   ******************************************************************************************
   * B) MODULO GAMEDEFINE
   ******************************************************************************************
+
+Da implementare TUTTE le seguenti funzioni:
  
 
 	void	GetGameName (char * name [OUT]);	
@@ -278,24 +280,54 @@ Da implementare tutte le seguenti funzioni:
 
 
 
+	DWORD	PrepareTextures (int linearFiltering);
 
-	int		GetTextureName (int place [IN], GLuint * texName);
-	   ritorna 0 se deve usare quella di default.
-
-
-
-	DWORD	PrepareTextures (int filtering);
-		Costruisce textures. Ritorna un codice di errore (IDS_MODULEMAP_PREPARETEXTURE) o 0.
+			Può costruisce textures personalizzate senza limitazioni direttamente
+			utilizzando le chiamate OpenGL "glGenTextures", "glBindTexture" e 
+			"glTexImage2D".
+			Se rileva qualche errore, ritorna il codice di errore 
+			IDS_MODULEMAP_PREPARETEXTURE, altrimenti zero.
 
 
 	int		FreeTextures ();
-		Le distrugge
+		
+			Distrugge l'eventuale memoria allocata da PrepareTextures.
+
+
+	int		GetTextureName (int place [IN], GLuint * texName [OUT]);
+
+			Dato un "place" (v. PrepareMap), fornisce un eventuale indice di 
+			texture personalizzata (v. PrepareTextures).
+			Se si deve utilizzare la texture di default per questo place,
+            ritorna 0.
+
+
 
 
 
   ******************************************************************************************
   * B) MODULO GRAPHICS
   ******************************************************************************************
+
+Da implementare le funzioni che si ritengono necessarie, oltre a quelle MANDATORY:
+SISTEMA MFC.
+
+
+	[MANDATORY]
+	void	GetVideoPluginName (char * name [OUT]);	   
+
+			Riceve il nome del plugin video che si definisce nella dll.
+			
+
+
+	void	InitOpenGL ()
+
+
+
+
+
+
+
 
 
 

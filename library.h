@@ -98,6 +98,18 @@ typedef int	 (*GETTEXTURENAME_TYPE)(int, GLuint *);
 typedef DWORD(*PREPARETEXTURES_TYPE)(int);
 typedef	int	 (*FREETEXTURES_TYPE)();
 
+typedef int	  (*GETTEXTPLACE_TYPE)(DWORD,GLuint*,GLfloat*,GLfloat*,GLfloat*);
+typedef void  (*GETGRAPHNAME_TYPE)(char *);
+typedef DWORD (*PREPAREOPENGL_TYPE)(HDC);
+typedef DWORD (*UNPREPAREOPENGL_TYPE)(HDC);
+typedef DWORD (*BUILDSTRUCTURE_TYPE)(struct MINESWEEPER_MAP * map);
+typedef void  (*FREESTRUCTURE_TYPE)();
+typedef DWORD (*RENDERER_TYPE) (int gameStatus, struct MINESWEEPER_MAP * map, GETTEXTPLACE_TYPE p_GetTextPlace,
+				  GLfloat * texVertex, int width, int height, int timer, int record,
+				  int active);
+
+
+
 
 #ifdef	THIS_IS_A_MODULE
 #ifdef __cplusplus
@@ -124,6 +136,22 @@ extern "C" {
 	int		_declspec (dllexport) GetTextureName (int, GLuint * );
 	DWORD	_declspec (dllexport) PrepareTextures (int);
 	int		_declspec (dllexport) FreeTextures ();
+
+	
+	void	_declspec (dllexport) GetGraphicsName (char * name);	
+	DWORD	_declspec (dllexport) PrepareOpenGL (HDC hDc);
+	DWORD	_declspec (dllexport) UnprepareOpenGL (HDC hDc);
+	DWORD	_declspec (dllexport) BuildStructure (MINESWEEPER_MAP * map);
+	void	_declspec (dllexport) FreeStructure ();
+	DWORD	_declspec (dllexport) Renderer (int gameStatus, 
+											MINESWEEPER_MAP * map, 
+											GETTEXTPLACE_TYPE p_GetTextPlace,
+											GLfloat * texVertex, 
+											int width, 
+											int height, 
+											int timer, 
+											int record,
+											int active);
 }
 #else
 	extern	void	_declspec (dllexport) GetMineInfo (int * version, struct MINE_MODULE_INFO * m);	
@@ -147,11 +175,24 @@ extern "C" {
 	extern	DWORD	_declspec (dllexport) PrepareTextures (int);
 	extern  int		_declspec (dllexport) FreeTextures ();
 
+
+	extern	void	_declspec (dllexport) GetGraphicsName (char * name);	
+	extern	DWORD	_declspec (dllexport) PrepareOpenGL (HDC hDc);
+	extern	DWORD	_declspec (dllexport) UnprepareOpenGL (HDC hDc);
+	extern	DWORD	_declspec (dllexport) BuildStructure (struct MINESWEEPER_MAP * map);
+	extern	void	_declspec (dllexport) FreeStructure ();
+	extern  DWORD	_declspec (dllexport) Renderer (int gameStatus, 
+											MINESWEEPER_MAP * map, 
+											GETTEXTPLACE_TYPE p_GetTextPlace,
+											GLfloat * texVertex, 
+											int width, 
+											int height, 
+											int timer, 
+											int record,
+											int active);
+
 #endif
 #endif		// THIS_IS_A_MODULE
 
 	
-// MODULE *****************************************************************************
-
-
 #endif		// main
