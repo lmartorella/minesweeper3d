@@ -101,17 +101,16 @@ SOURCE=.\HallsOfFameDlg.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\icosah.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\map.c
-# ADD CPP /Yu"stdafx2.h"
 # End Source File
 # Begin Source File
 
 SOURCE=.\MineSweeper3DDlg.cpp
 # SUBTRACT CPP /YX /Yc /Yu
+# End Source File
+# Begin Source File
+
+SOURCE=.\modules.c
 # End Source File
 # Begin Source File
 
@@ -145,7 +144,7 @@ SOURCE=.\HallsOfFameDlg.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\map.h
+SOURCE=.\library.h
 # End Source File
 # Begin Source File
 
@@ -154,6 +153,10 @@ SOURCE=.\MineSweeper3D.h
 # Begin Source File
 
 SOURCE=.\MineSweeper3DDlg.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\modules.h
 # End Source File
 # Begin Source File
 
@@ -195,6 +198,10 @@ SOURCE=.\MineSweeper3D.rc2
 # Begin Source File
 
 SOURCE=.\alfatesting.txt
+# End Source File
+# Begin Source File
+
+SOURCE=.\libraries.txt
 # End Source File
 # Begin Source File
 

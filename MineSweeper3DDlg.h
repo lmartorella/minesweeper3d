@@ -11,7 +11,6 @@ class CMineSweeper3DDlg : public CDialog
 // Construction
 public:
 	CMineSweeper3DDlg(CWnd* pParent = NULL);	// standard constructor
-	bool	PrepareOpenGL();
 
 // Dialog Data
 	//{{AFX_DATA(CMineSweeper3DDlg)
@@ -52,16 +51,31 @@ protected:
 	afx_msg void OnFiltering();
 	afx_msg void OnRButtonDblClk(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
+	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
+	afx_msg void OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags);
+	afx_msg void OnFileRestartgame();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 private:
-	void CtrlForWin();
+	void Record();
+	void SelectDefaultGame();
+	DWORD PrepareOpenGL();
+	int oldGameTypePos;
+	void OnSelectGameType(DWORD id);
+	void LoadPlugins();
+	void OnOK();
+	void UpdateMapMenu();
+	void UpdateGameMenu();
 	bool poll;
 	void NewGame(DWORD map);
 	bool cursorSetting;
-	LARGE_INTEGER pauseCount;
-	LARGE_INTEGER perfPeriod;
-	LARGE_INTEGER lastPerfCount;
+
+	DWORD pauseCount;
+	DWORD lastPerfCount;
+
+	LARGE_INTEGER lastFrameRendered;
+	LARGE_INTEGER minPeriodRefresh;
+
 	void StartGaming();
 	void PauseGaming();
 	bool gaming;
@@ -70,7 +84,8 @@ private:
 	int my;
 	int mx;
 	void ButtonDown (DWORD button, UINT nFlags, CPoint point);
-	
+
+	bool	mapReady;
 };
 
 //{{AFX_INSERT_LOCATION}}

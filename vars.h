@@ -2,29 +2,52 @@
 
 #pragma once
 
+#include "modules.h"
 
 
-#define CFGFILE_VER 2
-#define MAX_NAMELENGHT 32
+#define CFGFILE_VER 0x304
+#define STANDARD_GAME "minesw/original/standard"
 
-struct SUPERSWEEPER {
-	int		time;
-	char	name [MAX_NAMELENGHT];
+
+struct	RECORD {
+	char		name [MINE_MODULE_NAMESIZE];
+	char		mapName [MINE_MODULE_NAMESIZE];
+	UINT		record;
+	UINT		date;
+	UINT		crc;			// per frodi.
+};
+
+
+struct	MINE_VARS_MAPRECORD {
+	char	moduleName [MINE_MODULE_NAMESIZE];
+	int		nMaps;
+
+	struct RECORD * records;		// tanti quante sono le mappe
 };
 
 struct	GLOBAL_VARS {
-	struct SUPERSWEEPER hallsOfFame[NUMMAPTYPE];
-	int	   filtering;
+	int						nMapModules;
+	char					gameSelected [MINE_MODULE_NAMESIZE];
+	int						filtering;
+	struct MINE_VARS_MAPRECORD *	records; 
 };
 
 
 
 #ifdef __cplusplus 
 extern "C" {
-	void	LoadSettings();
-	int		StoreSettings ();
+	DWORD	LoadSettings();
+	DWORD	StoreSettings ();
+	char *	getDate (UINT date);
+	UINT    buildDate (unsigned int day, unsigned int month, unsigned int year);
+	RECORD	*	GetRecordArray (const char * const moduleName, int mapIdx);
 }
 #else
-	extern void		LoadSettings();
-	extern int		StoreSettings ();
+	extern DWORD	LoadSettings();
+	extern DWORD	StoreSettings ();
+	extern char *	getDate (UINT date);
+	extern UINT    buildDate (unsigned int day, unsigned int month, unsigned int year);
+	extern struct RECORD * GetRecordArray (const char * const moduleName, int mapIdx);
 #endif
+
+

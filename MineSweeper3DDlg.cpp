@@ -3,9 +3,10 @@
 
 #include "stdafx.h"
 
-#include "map.h"
+#include "library.h"
 #include "display.h"
 #include "vars.h"
+#include "modules.h"
 
 #include "MineSweeper3D.h"
 #include "MineSweeper3DDlg.h"
@@ -20,13 +21,24 @@ static char THIS_FILE[] = __FILE__;
 
 
 extern "C" {
-	extern MINESWEEPER_MAP map;
-	extern MINESWEEPER_MAPTYPE mapType[];
-	extern int mapReady;
-
-	extern int youWin, youLose, youWinRecord;
-
 	extern struct GLOBAL_VARS vars;
+	
+	extern MINESWEEPER_MAP map;
+	extern MINE_MODULE_MAPDESC * mapDescriptorList;
+	extern MINE_MODULE_GAMEDESC * gameDescriptorList;
+
+	extern	int						mapIndex;
+	extern	BUILDMAP_TYPE			p_BuildMap;
+	extern	PREPAREMAP_TYPE			p_PrepareMap;
+	extern	DESTROYMAP_TYPE			p_DestroyMap;
+	extern	SETCAMERAPARAMS_TYPE	p_SetCameraParams;
+	extern	RESETMAP_TYPE			p_ResetMap;
+
+	extern	MOUSEMOVE_TYPE			p_MouseMove;
+
+	extern  int gameStatus; 
+	extern	unsigned int timer;
+	extern  RECORD * recordArray;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -73,19 +85,7 @@ BOOL CMineSweeper3DApp::InitInstance()
 	CMineSweeper3DDlg dlg;
 	m_pMainWnd = &dlg;
 	int nResponse = dlg.DoModal();
-	if (nResponse == IDOK)
-	{
-		// TODO: Place code here to handle when the dialog is
-		//  dismissed with OK
-	}
-	else if (nResponse == IDCANCEL)
-	{
-		// TODO: Place code here to handle when the dialog is
-		//  dismissed with Cancel
-	}
 
-	// Since the dialog has been closed, return FALSE so that we exit the
-	//  application, rather than start the application's message pump.
 	return FALSE;
 }
 
@@ -149,12 +149,20 @@ CMineSweeper3DDlg::CMineSweeper3DDlg(CWnd* pParent /*=NULL*/)
 		// NOTE: the ClassWizard will add member initialization here
 	//}}AFX_DATA_INIT
 	// Note that LoadIcon does not require a subsequent DestroyIcon in Win32
-	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
-
+	m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
 
 	mx = my = 0;
 	mouseButtonState = 0;
+	mapReady = false;
+
+	p_BuildMap = NULL;
+	p_PrepareMap = NULL;
+	p_DestroyMap = NULL;
+	p_MouseMove = NULL;
+	p_SetCameraParams = NULL;
 }
+
+
 
 void CMineSweeper3DDlg::DoDataExchange(CDataExchange* pDX)
 {
@@ -178,25 +186,26 @@ BEGIN_MESSAGE_MAP(CMineSweeper3DDlg, CDialog)
 	ON_COMMAND(IDM_FILTERING, OnFiltering)
 	ON_WM_RBUTTONDBLCLK()
 	ON_WM_LBUTTONDBLCLK()
+	ON_WM_KEYDOWN()
+	ON_WM_KEYUP()
+	ON_COMMAND(ID_FILE_RESTARTGAME, OnFileRestartgame)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
 
 
 
-bool	CMineSweeper3DDlg::PrepareOpenGL()
+DWORD	CMineSweeper3DDlg::PrepareOpenGL()
 {
 	CDC * pDC = GetDC();
 	HDC hDC = pDC->m_hDC;
 
     PIXELFORMATDESCRIPTOR pfd;
 
-    /* there is no guarantee that the contents of the stack that become
-       the pfd are zeroed, therefore _make sure_ to clear these bits. */
     memset(&pfd, 0, sizeof(pfd));
     pfd.nSize        = sizeof(pfd);
     pfd.nVersion     = 1;
-    pfd.dwFlags      = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL |/* accelerator | */
+    pfd.dwFlags      = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL /*| PFD_GENERIC_ACCELERATED */| 
 		               PFD_DOUBLEBUFFER;
     pfd.iPixelType   = PFD_TYPE_RGBA;
     pfd.cDepthBits   = 16;
@@ -204,17 +213,11 @@ bool	CMineSweeper3DDlg::PrepareOpenGL()
 	pfd.dwLayerMask	 = PFD_MAIN_PLANE;
 
     int pf = ChoosePixelFormat(hDC, &pfd);
-    if (pf == 0) {
-		AfxMessageBox("ChoosePixelFormat() failed:  "
-		   "Cannot find a suitable pixel format.", MB_OK); 
-		return false;
-    } 
+    if (pf == 0) 
+		return IDS_OPENGL_CHOOSEPIXELFORMAT;
  
-    if (SetPixelFormat(hDC, pf, &pfd) == FALSE) {
-		MessageBox("SetPixelFormat() failed:  "
-			   "Cannot set format specified.", MB_OK);
-		return false;
-    } 
+    if (SetPixelFormat(hDC, pf, &pfd) == FALSE) 
+		return IDS_OPENGL_SETPIXELFORMAT;
 
     DescribePixelFormat(hDC, pf, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
 
@@ -234,15 +237,12 @@ bool	CMineSweeper3DDlg::PrepareOpenGL()
 
 		GetSystemPaletteEntries(hDC, 0, n, &lpPal->palPalEntry[0]);
     
-		/* if the pixel type is RGBA, then we want to make an RGB ramp,
-		   otherwise (color index) set individual colors. */
 		if (pfd.iPixelType == PFD_TYPE_RGBA) {
 		    int redMask = (1 << pfd.cRedBits) - 1;
 		    int greenMask = (1 << pfd.cGreenBits) - 1;
 		    int blueMask = (1 << pfd.cBlueBits) - 1;
 		    int i;
 
-			/* fill in the entries with an RGB color ramp. */
 			for (i = 0; i < n; ++i) {
 				lpPal->palPalEntry[i].peRed = 
 				    (((i >> pfd.cRedShift)   & redMask)   * 255) / redMask;
@@ -280,7 +280,7 @@ bool	CMineSweeper3DDlg::PrepareOpenGL()
     }
 
     ReleaseDC(pDC);
-	return true;
+	return 0;
 }
 
 
@@ -300,30 +300,56 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
-	LoadSettings ();
+	// Apertura plugins
+	LoadPlugins();
+
+	// ...e in base ai plugins disponibili...
+	DWORD err = LoadSettings ();
+    if (err) {
+		CString e;
+		e.LoadString (err);
+		AfxMessageBox (err, MB_OK | MB_ICONEXCLAMATION);
+	}
+
+	SelectDefaultGame();
+
 
 	srand (time(NULL));
 
-    if (!PrepareOpenGL()) 
+	err = PrepareOpenGL();
+    if (err) {
+		CString e;
+		e.LoadString (err);
+		AfxMessageBox (err, MB_OK | MB_ICONSTOP);
 		exit (1);
+	}
 
 	pDC = GetDC();
     hRC = wglCreateContext(pDC->m_hDC);
     wglMakeCurrent(pDC->m_hDC, hRC);
 
+	LARGE_INTEGER perfPeriod;
 	if (!QueryPerformanceFrequency (&perfPeriod)) {
-		AfxMessageBox ("Performance Timer not supported by hardware", MB_OK);
+		CString e;
+		e.LoadString (IDS_MAIN_PERFTIMER);
+		AfxMessageBox (e, MB_OK | MB_ICONSTOP);
 		exit (1);
 	}
-	perfPeriod.QuadPart /= 10;			// decimi di secondo
+
 	gaming = false;
 	SetTimer (EVENTTIMER, 500, NULL);	// per rinfresco passivo
-
+	minPeriodRefresh.QuadPart = perfPeriod.QuadPart / 50;			// max 50 Hz
+	
 	cursorSetting = false;
 	poll = false;
 
-	if (!oglInit())
+	err = oglInit();
+	if (err) {
+		CString e;
+		e.LoadString (err);
+		AfxMessageBox (e, MB_OK | MB_ICONSTOP);
 		exit (1);
+	}
 
 	if (vars.filtering) 
 		CheckMenuItem (GetMenu()->m_hMenu, IDM_FILTERING, MF_CHECKED | MF_BYCOMMAND);
@@ -334,47 +360,7 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 }
 
 
-
   
-		
-
-void	CMineSweeper3DDlg::NewGame (DWORD typeC)
-{
-	gaming = false;
-
-	for (int i = 0; i < 4; i++)
-		if (mapType[i].commandType == typeC)
-			break;
-
-	if (i >= 4)
-		return;
-
-	bool changed = (int)map.typeIndex != i;
-	gameClose(changed == true);
-
-	if (changed) {
-		destroyMap ();
-		if (!buildMap (i)) {
-			AfxMessageBox ("Error building map", MB_OK);
-			exit (1);
-		}
-	}
-
-	if (!prepareMap (mapType[i].mines, changed == true)) {				// mette le mine
-		AfxMessageBox ("Too neighbour in map preparation", MB_OK);
-		exit (1);
-	}
-
-	if (!gameInit(changed == true))
-		exit (1);
-
-	QueryPerformanceCounter (&pauseCount);
-	lastPerfCount = pauseCount;
-	timerSet (0);
-
-	PostMessage (WM_PAINT);
-}
-
 
 
 // If you add a minimize button to your dialog, you will need the code below
@@ -402,21 +388,27 @@ void CMineSweeper3DDlg::OnPaint()
 	}
 	else {
 		// Conta i decimi di secondo.
-		if (gaming) {
-			LARGE_INTEGER li;
+	    static PAINTSTRUCT ps;
+		LARGE_INTEGER li;
+		QueryPerformanceCounter (&li);
 
-			QueryPerformanceCounter (&li);
-			int c = int((li.QuadPart - lastPerfCount.QuadPart) / perfPeriod.QuadPart);
-			timerSet (c);
+		if (li.QuadPart - lastFrameRendered.QuadPart >= minPeriodRefresh.QuadPart ||
+			li.QuadPart < lastFrameRendered.QuadPart) {
+
+			lastFrameRendered = li;
+
+			if (gaming) {
+				DWORD d = GetTickCount();
+				timerSet ((d - lastPerfCount) / 100);	// Decimi di secondo
+			}
+
+			updateDisplay();
+		    SwapBuffers(pDC->m_hDC);				
+			poll = false;
 		}
 
-	    static PAINTSTRUCT ps;
-		updateDisplay();
-	    SwapBuffers(pDC->m_hDC);				/* nop if singlebuffered */
 		BeginPaint(&ps);
 		EndPaint(&ps);
-
-		poll = false;
 	}
 }
 
@@ -429,12 +421,16 @@ HCURSOR CMineSweeper3DDlg::OnQueryDragIcon()
 
 BOOL CMineSweeper3DDlg::DestroyWindow() 
 {
-	if (!StoreSettings ()) 
-		AfxMessageBox ("Unable to write CFG file.");
+	DWORD err = StoreSettings();
+	if (err) {
+		CString e;
+		e.LoadString (IDS_MAIN_PERFTIMER);
+		AfxMessageBox (e, MB_OK | MB_ICONEXCLAMATION);
+	}
 
 	gaming = false;
 	gameClose(1);
-	destroyMap ();
+	//destroyMap();
 	oglClose();
 
 	wglMakeCurrent(NULL, NULL);
@@ -443,6 +439,7 @@ BOOL CMineSweeper3DDlg::DestroyWindow()
 
     if (hPalette)
 		DeleteObject(hPalette);
+	DestroyDescriptorLists ();
 	
 	return CDialog::DestroyWindow();
 }
@@ -489,6 +486,8 @@ void CMineSweeper3DDlg::OnRButtonDown(UINT nFlags, CPoint point)
 	CDialog::OnRButtonDown(nFlags, point);
 }
 
+
+
 void CMineSweeper3DDlg::ButtonDown(DWORD button, UINT nFlags, CPoint point)
 {
 	int unlock;
@@ -500,12 +499,14 @@ void CMineSweeper3DDlg::ButtonDown(DWORD button, UINT nFlags, CPoint point)
 	    mouseButtonState |= 1;
 	if (button == WM_RBUTTONDOWN)
 	    mouseButtonState |= 2;
-	if (mouseButton (button, mx, my, &unlock))
+	if (processMouseButton (button, mx, my, &unlock))
 		PostMessage(WM_PAINT, 0, 0);
+
+	if (gameStatus == GAME_STATUS_ENDED_WINRECORD) 
+		Record();
 
 	if (unlock) {
 		PauseGaming();
-		CtrlForWin();
 		PostMessage (WM_PAINT);
 	}
 }
@@ -533,11 +534,12 @@ void CMineSweeper3DDlg::ButtonUp(DWORD button, UINT nFlags, CPoint point)
 	int unlock;
 	ReleaseCapture();
 	mouseButtonState = 0;
-	if (mouseButton (button, point.x, point.y, &unlock))
+	if (processMouseButton (button, point.x, point.y, &unlock))
 		PostMessage(WM_PAINT, 0, 0);
+	if (gameStatus == GAME_STATUS_ENDED_WINRECORD) 
+		Record();
 	if (unlock) {
 		PauseGaming();
-		CtrlForWin();
 		PostMessage (WM_PAINT);
 	}
 }
@@ -558,7 +560,7 @@ void CMineSweeper3DDlg::OnMouseMove(UINT nFlags, CPoint point)
 		else {
 			GetCursorPos (&p);
 			if ((x-p.x) != 0 || (y-p.y) != 0) {
-				if (mouseMove(x - p.x, y - p.y))
+				if (p_MouseMove(mapIndex, x - p.x, y - p.y))
 					PostMessage(WM_PAINT, 0, 0);
 				else 
 					cursorSetting = true;
@@ -576,7 +578,7 @@ BOOL CMineSweeper3DDlg::OnCommand(WPARAM wParam, LPARAM lParam)
 {
 	CAboutDlg * dlgAbout;
 	CHallsOfFameDlg * dlgFame;
-	int i;
+//	int i;
 
 	switch (wParam) {
 	case IDM_ABOUTBOX:
@@ -587,26 +589,102 @@ BOOL CMineSweeper3DDlg::OnCommand(WPARAM wParam, LPARAM lParam)
 	case IDM_FILE_EXIT:
 		PostQuitMessage(0);
 		return TRUE;
-	case IDM_ICO1:
-	case IDM_ICO2:
-	case IDM_ICO3:
-	case IDM_ICO4:
-		NewGame (wParam);
-		return TRUE;
-
 	case IDM_HALLSOFFAME:
 		dlgFame = new CHallsOfFameDlg;
-		for (i = 0; i < NUMMAPTYPE; i++)
-			dlgFame->fame[i] = vars.hallsOfFame[i];
 		dlgFame->DoModal();
 		delete (dlgFame);
 		return TRUE;
 
 	default:
+		if (wParam >= ID_NEWMAP_GAME && wParam < ID_NEWMAP_GAME + MAX_MAPS_COUNT) {
+			NewGame (wParam);
+			return TRUE;
+		}
+		if (wParam >= ID_GAMETYPE && wParam < ID_GAMETYPE + MAX_GAMETYPE_COUNT) {
+			OnSelectGameType (wParam);
+			return TRUE;
+		}
 		return CDialog::OnCommand(wParam, lParam);
 	}
 }
 
+
+
+
+// MFC**************
+// FindMenuItem() will find a menu item string from the specified
+// popup menu and returns its position (0-based) in the specified
+// popup menu. It returns -1 if no such menu item string is found.
+int FindMenuItem(CMenu* Menu, LPCTSTR MenuString)
+{
+   int count = Menu->GetMenuItemCount();
+   for (int i = 0; i < count; i++) {
+      CString str;
+      if (Menu->GetMenuString(i, str, MF_BYPOSITION) &&
+         (strcmp(str, MenuString) == 0))
+         return i;
+   }
+   return -1;
+}
+int FindMenuItem(CMenu* Menu, DWORD command)
+{
+   int count = Menu->GetMenuItemCount();
+   for (int i = 0; i < count; i++) {
+      CString str;
+      if (Menu->GetMenuItemID(i) == command)
+         return i;
+   }
+   return -1;
+}
+
+
+void	CMineSweeper3DDlg::NewGame (DWORD code)
+{
+	gaming = false;
+	mapReady = false;
+
+	DWORD err = newGame (code);
+	if (err) {
+		CString e;
+		e.LoadString (err);
+		AfxMessageBox(err, MB_OK | MB_ICONEXCLAMATION);
+		return;
+	}
+
+	resetGame();
+	p_ResetMap (mapIndex);
+	p_MouseMove (mapIndex, 0, 0);
+
+	lastPerfCount = pauseCount = GetTickCount ();
+	lastFrameRendered.QuadPart = 0;
+
+	RECT rect;
+	GetClientRect (&rect);
+	changeWindowSize(rect.right, rect.bottom);
+	PostMessage (WM_PAINT);
+	mapReady = true;
+
+	CMenu * menu = GetMenu ();
+	int f = FindMenuItem (menu, "&File");
+	menu = menu->GetSubMenu(f);
+	menu->EnableMenuItem (ID_FILE_RESTARTGAME, MF_BYCOMMAND | MF_ENABLED);
+
+	// Disabilita i menu di modo gioco
+	menu = GetMenu ();
+	f = FindMenuItem (menu, "&Library");
+	menu = menu->GetSubMenu(f);
+	f = FindMenuItem (menu, "Select &Game type");
+	menu = menu->GetSubMenu(f);
+	int count = menu->GetMenuItemCount();
+	for (int i = 0; i < count; i++) 
+		menu->EnableMenuItem (i, MF_BYPOSITION | MF_GRAYED);
+}
+
+
+void CMineSweeper3DDlg::OnFileRestartgame() 
+{
+	NewGame (map.code);	
+}
 
 
 void CMineSweeper3DDlg::StartGaming()
@@ -627,18 +705,16 @@ void CMineSweeper3DDlg::StartGaming()
 	ShowCursor (FALSE);
 	unpause();
 
-	LARGE_INTEGER t;
-
-	QueryPerformanceCounter (&t);
-	t.QuadPart -= pauseCount.QuadPart;			// tempo di pausa
-	lastPerfCount.QuadPart += t.QuadPart;
+	DWORD t = GetTickCount ();
+	t -= pauseCount;							// tempo di pausa
+	lastPerfCount += t;
 	gaming = true;
 }
 
 
 void CMineSweeper3DDlg::PauseGaming()
 {
-	QueryPerformanceCounter (&pauseCount);
+	pauseCount = GetTickCount();
 	gaming = false;
 	ClipCursor (NULL);
 	ShowCursor (TRUE);
@@ -678,27 +754,16 @@ BOOL CAboutDlg::OnInitDialog()
 {
 	CDialog::OnInitDialog();
 	
-	CString strAbout;
-	strAbout.LoadString(IDS_VERSION);
-
-	m_version = "MineSweeper 3D Versione " + strAbout;
+	CString tmp;
+	tmp.LoadString(IDS_VERSION);
+	m_version.LoadString (IDS_ABOUT);
+	m_version += tmp;
 	UpdateData (FALSE);
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 	              // EXCEPTION: OCX Property Pages should return FALSE
 }
 
-void CMineSweeper3DDlg::CtrlForWin()
-{
-	if (youWinRecord) {
-		CWonDlg dlg;
-		dlg.DoModal();
-		strncpy (vars.hallsOfFame[map.typeIndex].name, dlg.m_name, MAX_NAMELENGHT);
-		PostMessage (WM_COMMAND, IDM_HALLSOFFAME);
-
-		youWinRecord = 0;
-	}
-}
 
 void CMineSweeper3DDlg::OnFiltering() 
 {
@@ -711,7 +776,204 @@ void CMineSweeper3DDlg::OnFiltering()
 	else 
 		vars.filtering = 1;
 
-	if (!rebuildTextures())
+	DWORD err = rebuildTextures(); 
+	if (err != 0) {
+		CString e;
+		e.LoadString (err);
+		AfxMessageBox (e, MB_OK | MB_ICONSTOP);
 		exit (1);
+	}
 }
 
+
+
+
+void CMineSweeper3DDlg::UpdateMapMenu()
+{
+	// Aggiorna voci del menu
+	CMenu * menu = GetMenu ();
+	int f = FindMenuItem (menu, "&File");
+	menu = menu->GetSubMenu(f);
+	f = FindMenuItem (menu, "&New Game");
+	menu = menu->GetSubMenu(f);
+
+	while (menu->DeleteMenu(0, MF_BYPOSITION) != 0);
+
+	MINE_MODULE_MAPDESC * p = mapDescriptorList;
+	while (p != NULL) { 
+		for (unsigned int i = 0; i < p->nMaps; i++)
+			menu->AppendMenu (MF_STRING, p->mapDesc[i].code, p->mapDesc[i].name);
+		p = p->next;
+		if (p != NULL)
+			menu->AppendMenu (MF_SEPARATOR);
+	}
+}
+
+
+
+void CMineSweeper3DDlg::UpdateGameMenu()
+{
+	// Aggiorna voci del menu
+	CMenu * menu = GetMenu ();
+	int f = FindMenuItem (menu, "&Library");
+	menu = menu->GetSubMenu(f);
+	f = FindMenuItem (menu, "Select &Game type");
+	menu = menu->GetSubMenu(f);
+
+	while (menu->DeleteMenu(0, MF_BYPOSITION) != 0);
+
+	MINE_MODULE_GAMEDESC * p = gameDescriptorList;
+	while (p != NULL) { 
+		menu->AppendMenu (MF_STRING, p->code, p->name);
+		p = p->next;
+	}
+}
+
+
+
+
+void CMineSweeper3DDlg::OnOK()
+{
+}
+
+
+void CMineSweeper3DDlg::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) 
+{
+	if (nChar != VK_ESCAPE)	
+		CDialog::OnKeyDown(nChar, nRepCnt, nFlags);
+}
+
+void CMineSweeper3DDlg::OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags) 
+{
+	if (nChar != VK_ESCAPE)	
+		CDialog::OnKeyUp(nChar, nRepCnt, nFlags);
+}
+
+
+
+
+
+void CMineSweeper3DDlg::LoadPlugins()
+{
+	CFileFind finder;
+	BOOL work = finder.FindFile ("plugins\\*.dll");
+	while (work) {
+		work = finder.FindNextFile();
+		if (finder.IsDots())
+			continue;
+		if (finder.IsDirectory())
+			continue;
+		// Trovata una dll.
+
+		DWORD err = ReadLibrary (finder.GetFilePath());
+		if (err) {
+			CString e, f;
+			e.LoadString (err);
+			f.Format (e, finder.GetFilePath());
+			AfxMessageBox (f, MB_OK | MB_ICONEXCLAMATION);
+		}
+	}
+
+	// Ok, liste aggiornate.
+	// Aggiornamento menu mappa
+	UpdateMapMenu();
+
+	// Aggiornamento lista games
+	UpdateGameMenu();
+}
+
+
+
+
+void CMineSweeper3DDlg::SelectDefaultGame()
+{
+	// Selezione plugin predefinito
+	CMenu * menu = GetMenu ();
+	int f = FindMenuItem (menu, "&Library");
+	menu = menu->GetSubMenu(f);
+	f = FindMenuItem (menu, "Select &Game type");
+	menu = menu->GetSubMenu(f);
+
+	MINE_MODULE_GAMEDESC * desc = gameDescriptorList;
+	while (desc != NULL && strcmp (desc->moduleName, vars.gameSelected))
+		desc = desc->next; 
+	if (desc == NULL) {
+		// Carica default.
+		desc = gameDescriptorList;
+		while (desc != NULL && strcmp (desc->moduleName, STANDARD_GAME))
+			desc = desc->next; 
+		if (desc == NULL) {
+			CString e;
+			e.LoadString (IDS_MAIN_STANDARDLIBRARY);
+			AfxMessageBox(e, MB_OK | MB_ICONSTOP);
+			exit (1);
+		}
+		strcpy (vars.gameSelected, STANDARD_GAME);
+	}
+
+	f = FindMenuItem (menu, desc->name);
+
+	menu->CheckMenuItem (f, MF_BYPOSITION | MF_CHECKED);
+	oldGameTypePos = f;
+	OnSelectGameType (menu->GetMenuItemID (f));
+}
+
+
+
+void CMineSweeper3DDlg::OnSelectGameType(DWORD id)
+{
+	// Well, find game type, open Library and set-up functions!
+	MINE_MODULE_GAMEDESC * p = gameDescriptorList;
+	while (p != NULL) { 
+		if (p->code == id)
+			break;
+		p = p->next;
+	}
+	if (p == NULL)
+		return;					// Nulla di fatto.
+	strcpy (vars.gameSelected, p->moduleName);
+
+	DWORD err = SelectGameType (p);
+	if (err) {
+		CString e;
+		e.LoadString (err);
+		AfxMessageBox (e, MB_OK | MB_ICONSTOP);
+		exit (1);
+	}
+
+	CMenu * menu = GetMenu ();
+	int f = FindMenuItem (menu, "&Library");
+	menu = menu->GetSubMenu(f);
+	f = FindMenuItem (menu, "Select &Game type");
+	menu = menu->GetSubMenu(f);
+	f = FindMenuItem (menu, id);
+	if (f == -1) {
+		CString e;
+		e.LoadString (IDS_MAIN_MENUITEMS);
+		AfxMessageBox(e);
+		exit (1);
+	}
+
+	menu->CheckMenuItem (oldGameTypePos, MF_BYPOSITION | MF_UNCHECKED);
+	menu->CheckMenuItem (f, MF_BYPOSITION | MF_CHECKED);
+	oldGameTypePos = f;
+}
+
+
+
+
+
+void CMineSweeper3DDlg::Record()
+{
+	CWonDlg dlg;
+	dlg.DoModal();
+
+	recordArray->record = timer / 10;
+	strncpy (recordArray->name, dlg.m_name, MINE_MODULE_NAMESIZE);
+	
+	SYSTEMTIME t;
+	GetSystemTime (&t);
+	recordArray->date = buildDate(t.wDay, t.wMonth, t.wYear);
+
+	gameStatus = GAME_STATUS_ENDED_WIN;
+}

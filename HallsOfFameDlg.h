@@ -15,16 +15,13 @@ class CHallsOfFameDlg : public CDialog
 {
 // Construction
 public:
-	SUPERSWEEPER fame[4];
+//	SUPERSWEEPER fame[4];
 	CHallsOfFameDlg(CWnd* pParent = NULL);   // standard constructor
 
 // Dialog Data
 	//{{AFX_DATA(CHallsOfFameDlg)
 	enum { IDD = IDD_HALLSOFFAME };
-	CString	m_value1;
-	CString	m_value2;
-	CString	m_value3;
-	CString	m_value4;
+	CListCtrl	m_list;
 	//}}AFX_DATA
 
 

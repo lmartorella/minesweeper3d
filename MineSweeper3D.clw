@@ -2,7 +2,7 @@
 
 [General Info]
 Version=1
-LastClass=CMineSweeper3DDlg
+LastClass=CHallsOfFameDlg
 LastTemplate=CDialog
 NewFileInclude1=#include "stdafx.h"
 NewFileInclude2=#include "MineSweeper3D.h"
@@ -13,12 +13,12 @@ Class2=CMineSweeper3DDlg
 Class3=CAboutDlg
 
 ResourceCount=6
-Resource1=IDD_HALLSOFFAME
+Resource1=IDD_MINESWEEPER3D_DIALOG
 Resource2=IDR_MAINFRAME
 Resource3=IDD_ABOUTBOX
-Resource4=IDD_MINESWEEPER3D_DIALOG
+Resource4=IDD_RECORD
 Class4=CHallsOfFameDlg
-Resource5=IDD_RECORD
+Resource5=IDD_HALLSOFFAME
 Class5=CWonDlg
 Resource6=IDR_MENU1
 
@@ -49,10 +49,11 @@ LastObject=CAboutDlg
 [DLG:IDD_ABOUTBOX]
 Type=1
 Class=CAboutDlg
-ControlCount=3
+ControlCount=4
 Control1=IDC_VERSION,static,1342308480
 Control2=IDC_STATIC,static,1342308352
 Control3=IDOK,button,1342373889
+Control4=IDC_STATIC,static,1342177283
 
 [DLG:IDD_MINESWEEPER3D_DIALOG]
 Type=1
@@ -62,15 +63,12 @@ ControlCount=0
 [MNU:IDR_MENU1]
 Type=1
 Class=?
-Command1=IDM_ICO1
-Command2=IDM_ICO2
-Command3=IDM_ICO3
-Command4=IDM_ICO4
-Command5=IDM_FILE_EXIT
-Command6=IDM_HALLSOFFAME
-Command7=IDM_FILTERING
-Command8=IDM_ABOUTBOX
-CommandCount=8
+Command1=ID_FILE_RESTARTGAME
+Command2=IDM_FILE_EXIT
+Command3=IDM_HALLSOFFAME
+Command4=IDM_FILTERING
+Command5=IDM_ABOUTBOX
+CommandCount=5
 
 [CLS:CHallsOfFameDlg]
 Type=0
@@ -84,16 +82,10 @@ VirtualFilter=dWC
 [DLG:IDD_HALLSOFFAME]
 Type=1
 Class=CHallsOfFameDlg
-ControlCount=9
+ControlCount=3
 Control1=IDOK,button,1342242817
-Control2=IDC_STATIC,static,1342308352
-Control3=IDC_STATIC,static,1342308352
-Control4=IDC_STATIC,static,1342308352
-Control5=IDC_STATIC,static,1342308352
-Control6=IDC_PUN1,static,1342308352
-Control7=IDC_PUN2,static,1342308352
-Control8=IDC_PUN3,static,1342308352
-Control9=IDC_PUN4,static,1342308352
+Control2=IDC_STATIC,static,1342312961
+Control3=IDC_LIST2,SysListView32,1350664961
 
 [CLS:CWonDlg]
 Type=0

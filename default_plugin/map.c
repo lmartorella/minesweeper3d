@@ -1,11 +1,55 @@
 
 
-#include "stdafx2.h"
-#include "map.h"
+#include "stdafx.h"
+
+#define THIS_IS_A_MODULE
+#include "..\library.h"
+
+
+/* OPENGL */
+#define Z_VIEW -3.6f
+#define Z_MIN  0.1f
+#define Z_MAX  10.0f
+#define FOV    32.0f		
+
+#define X_SENS 2.25e-03f
+#define Y_SENS 2.25e-03f
+
+
+GLfloat	rot[16];
+
+
+
+void	GetMineInfo (int * versione, struct MINE_MODULE_INFO * m)
+{
+	strcpy (m->name, "minesw/original/standard");
+	*versione = 0x100;
+}
+
+
+
+void	GetMapCount (int * count)
+{
+	*count = 4;			
+}
+
+
+static char  names[4][32] = {  "Cube", 
+							    "2-Icosahedron (80)", 
+							    "3-Icosahedron (320)", 
+								"4-Icosahedron (1280)" };
+
+
+void	GetMapName (int number, char * name)
+{
+	strcpy (name, names[number]);
+}
 
 
 
 
+#define X .525731112119133606f
+#define Z .850650808352039932f
 
 
 /*  numVert80 = numVert20 + numLati20 = 12 + 30 = 42 */
@@ -283,65 +327,168 @@ void subdivide(int index, int *lastVertex, int *lastTriangle, int *lastSide)
 
 
 
+static int mines [4] = { 1, 8, 32, 128 };
 
 
-void	buildN_UpIcosahedron (struct MINESWEEPER_MAP * map, int n)
+static struct MINESWEEPER_VERTEX cubeVertexes [8] = 
+{ 
+	{ 0, 0, 0 },
+	{ 1, 0, 0 },
+	{ 1, 1, 0 },
+	{ 0, 1, 0 },
+	{ 0, 1, 1 },
+	{ 0, 0, 1 },
+	{ 1, 0, 1 },
+	{ 1, 1, 1 } 
+};
+
+static struct MINESWEEPER_FACE cubeFaces [6] =
+{
+	{ 0, 1, 2, 3, -1 },
+	{ 0, 5, 6, 1, -1 },
+	{ 0, 3, 4, 5, -1 },
+	{ 4, 3, 2, 7, -1 },
+	{ 2, 1, 6, 7, -1 },
+	{ 4, 7, 6, 5, -1 }
+};
+		
+
+void	BuildMap (int number, struct MINESWEEPER_MAP * map)
 {
 	int i, j;
 
-	initialize();
+	if (number != 0) {
+		initialize();
 
-	for (j=0; j<n; j++) {
-		/* preciclo di chiamata subdivide */
-		buildArrayNew();
-		for (i=0; i<propAct[0]; i++) {
-			vdataNew[i * 3 + 0] = vdataAct[i * 3 + 0];
-			vdataNew[i * 3 + 1] = vdataAct[i * 3 + 1];
-			vdataNew[i * 3 + 2] = vdataAct[i * 3 + 2];
+		for (j=0; j<number; j++) {
+			/* preciclo di chiamata subdivide */
+			buildArrayNew();
+			for (i=0; i<propAct[0]; i++) {
+				vdataNew[i * 3 + 0] = vdataAct[i * 3 + 0];
+				vdataNew[i * 3 + 1] = vdataAct[i * 3 + 1];
+				vdataNew[i * 3 + 2] = vdataAct[i * 3 + 2];
+			}
+			/* ciclo di chiamata subdivide */
+			propNew[0] = propAct[0];
+			propNew[1] = propAct[1];
+			propNew[2] = 0;
+			for (i = 0; i < propAct[1]; i++) 
+				subdivide(i, &propNew[0], &propNew[1], &propNew[2]);
+
+			aggiornaMatrix();
 		}
-		/* ciclo di chiamata subdivide */
-		propNew[0] = propAct[0];
-		propNew[1] = propAct[1];
-		propNew[2] = 0;
-		for (i = 0; i < propAct[1]; i++) 
-			subdivide(i, &propNew[0], &propNew[1], &propNew[2]);
-
-		aggiornaMatrix();
-	}
-
-
 	
-	map->nPlaces = propAct[1];
-	map->nVertexes = propAct[0];
+		map->nPlaces = propAct[1];
+		map->nVertexes = propAct[0];
+		map->vertex = (struct MINESWEEPER_VERTEX*) malloc (sizeof (struct MINESWEEPER_VERTEX) * propAct[0]);
+		map->face = (struct MINESWEEPER_FACE*) malloc (sizeof (struct MINESWEEPER_FACE) * propAct[1]);
 
-	map->vertex = (struct MINESWEEPER_VERTEX*) malloc (sizeof (struct MINESWEEPER_VERTEX) * propAct[0]);
-	map->face = (struct MINESWEEPER_FACE*) malloc (sizeof (struct MINESWEEPER_FACE) * propAct[1]);
-	if (map->face == NULL)
-			__asm {int 3}
+		for (i = 0; i < propAct[0]; i++) {
+			map->vertex[i].x = vdataAct[i * 3 + 0];
+			map->vertex[i].y = vdataAct[i * 3 + 1];
+			map->vertex[i].z = vdataAct[i * 3 + 2];
+		}
 
-	for (i = 0; i < propAct[0]; i++) {
-		map->vertex[i].x = vdataAct[i * 3 + 0];
-		map->vertex[i].y = vdataAct[i * 3 + 1];
-		map->vertex[i].z = vdataAct[i * 3 + 2];
+		for (i = 0; i < propAct[1]; i++) {
+			map->face[i].v[0] = tindicesAct[i * 3 + 0];
+			map->face[i].v[1] = tindicesAct[i * 3 + 1];
+			map->face[i].v[2] = tindicesAct[i * 3 + 2];
+			for (j = 3; j < 12; j++)
+				map->face[i].v[j] = -1;
+		}
+		deleteArrayAct();
 	}
-	for (i = 0; i < propAct[1]; i++) {
-		if ((tindicesAct[i * 3 + 0] >= propAct[0]) || (tindicesAct[i * 3 + 0] < 0))
-			__asm {int 3}
-		map->face[i].v[0] = tindicesAct[i * 3 + 0];
-
-		if ((tindicesAct[i * 3 + 1] >= propAct[0]) || (tindicesAct[i * 3 + 1] < 0))
-			__asm {int 3}
-		map->face[i].v[1] = tindicesAct[i * 3 + 1];
-		
-		if ((tindicesAct[i * 3 + 2] >= propAct[0]) || (tindicesAct[i * 3 + 2] < 0))
-			__asm {int 3}
-		map->face[i].v[2] = tindicesAct[i * 3 + 2];
-
-		for (j = 3; j < 12; j++)
-			map->face[i].v[j] = -1;
+	else {
+		map->nPlaces = 6;
+		map->nVertexes = 8;
+		map->vertex = cubeVertexes;
+		map->face = cubeFaces;
 	}
 
-	deleteArrayAct();
+	map->initialMines = mines[number]; 
+}
+
+
+
+
+void	DestroyMap (int idx, struct MINESWEEPER_MAP * map)
+{
+	if (idx != 0) {
+		free (map->face);
+		free (map->vertex);
+	}
+	map->face = NULL;
+	map->vertex = NULL;
+}
+
+
+
+
+
+// ------------------------------------------------ MOUSE EVENTS
+// ------------------------------------------------ MOUSE EVENTS
+// ------------------------------------------------ MOUSE EVENTS
+// ------------------------------------------------ MOUSE EVENTS
+
+
+
+void	mult (GLfloat * m1, GLfloat * m2, GLfloat * r)
+{
+	int i, j, k;
+	
+	for (i = 0; i < 4; i++)				// i riga
+		for (j = 0; j < 4; j++) {		// j colonna
+			r[i + j * 4] = 0;
+			for (k = 0; k < 4; k++)
+				r[i + j * 4] += m1[i + k * 4] * m2[j * 4 + k];
+		}
+}
+
+
+
+
+int		MouseMove(int idx, int dx, int dy)
+{
+	GLfloat x, y, cf, sf, ct, st;
+	static GLfloat	rotxy[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}, 
+					r[16]     = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
+
+	y = dy * X_SENS;
+	x = dx * Y_SENS;
+	
+	ct = (float)cos (x), st = (float)sin (x);
+	cf = (float)cos (y), sf = (float)sin (y);
+
+	rotxy[0] = ct, rotxy[1] = st*sf, rotxy[2] = -st*cf;
+	rotxy[5] = cf, rotxy[6] = sf;
+	rotxy[8] = st, rotxy[9] = -sf*ct, rotxy[10] = ct*cf;
+	
+	mult (rotxy, rot, r);
+	memcpy (rot, r, sizeof (GLfloat) * 16);
+
+	glLoadIdentity();
+	glTranslatef (0.0, 0.0, Z_VIEW);
+
+	glMultMatrixf (rot);
+	if (idx == 0)
+		glTranslatef (-0.5, -0.5, -0.5);
+
+	return 1;
+}
+
+
+
+
+void	SetCameraParams (int dummy, int width, int height)
+{
+	gluPerspective(FOV, (float) width / height, Z_MIN, Z_MAX);
+}
+
+
+void	ResetMap (int i)
+{
+	memset (rot, 0, 16 * sizeof (GLfloat));
+	rot[0] = rot[5] = rot[10] = rot[15] = 1.0;
 }
 
 

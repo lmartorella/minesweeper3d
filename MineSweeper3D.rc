@@ -73,6 +73,7 @@ BEGIN
     LTEXT           "Copyright (C) LuxSoftware - Noinet - Pisa - 2001",
                     IDC_STATIC,40,29,176,8
     DEFPUSHBUTTON   "OK",IDOK,178,7,50,14,WS_GROUP
+    ICON            IDI_ICON1,IDC_STATIC,15,15,16,16
 END
 
 IDD_MINESWEEPER3D_DIALOG DIALOGEX 0, 0, 262, 160
@@ -85,20 +86,17 @@ FONT 8, "MS Sans Serif", 0, 0, 0x1
 BEGIN
 END
 
-IDD_HALLSOFFAME DIALOG DISCARDABLE  0, 0, 209, 76
+IDD_HALLSOFFAME DIALOG DISCARDABLE  0, 0, 204, 160
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Halls of Fame"
 FONT 8, "MS Sans Serif"
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,150,50,50,14
-    LTEXT           "Icosahedron (20)",IDC_STATIC,5,10,51,8
-    LTEXT           "3-Icosahedron (320)",IDC_STATIC,5,40,60,8
-    LTEXT           "2-Icosahedron (80)",IDC_STATIC,5,25,57,8
-    LTEXT           "4-Icosahedron (1280)",IDC_STATIC,5,55,64,8
-    LTEXT           "Static",IDC_PUN1,75,10,65,8
-    LTEXT           "Static",IDC_PUN2,75,25,65,8
-    LTEXT           "Static",IDC_PUN3,75,40,65,8
-    LTEXT           "Static",IDC_PUN4,75,55,65,8
+    DEFPUSHBUTTON   "OK",IDOK,150,140,50,14
+    CTEXT           "Hall of fame",IDC_STATIC,5,5,190,10,SS_CENTERIMAGE | 
+                    SS_SUNKEN
+    CONTROL         "List2",IDC_LIST2,"SysListView32",LVS_REPORT | 
+                    LVS_AUTOARRANGE | LVS_EDITLABELS | LVS_NOSORTHEADER | 
+                    WS_BORDER | WS_TABSTOP,5,20,190,115
 END
 
 IDD_RECORD DIALOG DISCARDABLE  0, 0, 133, 67
@@ -134,8 +132,9 @@ VS_VERSION_INFO VERSIONINFO
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "041004B0"
+        BLOCK "041004b0"
         BEGIN
+            VALUE "Comments", "\0"
             VALUE "CompanyName", "\0"
             VALUE "FileDescription", "MineSweeper3D Applicazione MFC\0"
             VALUE "FileVersion", "1, 0, 0, 1\0"
@@ -143,8 +142,10 @@ BEGIN
             VALUE "LegalCopyright", "Copyright (C) 2001\0"
             VALUE "LegalTrademarks", "\0"
             VALUE "OriginalFilename", "MineSweeper3D.EXE\0"
+            VALUE "PrivateBuild", "\0"
             VALUE "ProductName", "MineSweeper3D Applicazione\0"
             VALUE "ProductVersion", "1, 0, 0, 1\0"
+            VALUE "SpecialBuild", "\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -183,9 +184,9 @@ BEGIN
     IDD_HALLSOFFAME, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 202
+        RIGHTMARGIN, 197
         TOPMARGIN, 7
-        BOTTOMMARGIN, 69
+        BOTTOMMARGIN, 153
     END
 
     IDD_RECORD, DIALOG
@@ -206,27 +207,32 @@ END
 
 IDR_MENU1 MENU DISCARDABLE 
 BEGIN
-    POPUP "File"
+    POPUP "&File"
     BEGIN
-        POPUP "New Game"
+        MENUITEM "&Restart Game",               ID_FILE_RESTARTGAME, GRAYED
+        POPUP "&New Game"
         BEGIN
-            MENUITEM "Icosahedron (20)",            IDM_ICO1
-            MENUITEM "2-Icosahedron (80)",          IDM_ICO2
-            MENUITEM "3-Icosahedron (320)",         IDM_ICO3
-            MENUITEM "4-Icosahedron (1280)",        IDM_ICO4
+            MENUITEM SEPARATOR
         END
         MENUITEM SEPARATOR
-        MENUITEM "Exit",                        IDM_FILE_EXIT
+        MENUITEM "&Exit",                       IDM_FILE_EXIT
     END
-    POPUP "View"
+    POPUP "&Library"
     BEGIN
-        MENUITEM "Halls of Fame",               IDM_HALLSOFFAME
+        POPUP "Select &Game type"
+        BEGIN
+            MENUITEM SEPARATOR
+        END
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Halls of Fame",              IDM_HALLSOFFAME
         MENUITEM SEPARATOR
-        MENUITEM "Linear filtering",            IDM_FILTERING, CHECKED
+        MENUITEM "&Linear filtering",           IDM_FILTERING, CHECKED
     END
-    POPUP "Help"
+    POPUP "&Help"
     BEGIN
-        MENUITEM "About...",                    IDM_ABOUTBOX
+        MENUITEM "&About...",                   IDM_ABOUTBOX
     END
 END
 
@@ -247,7 +253,38 @@ IDI_ICON1               ICON    DISCARDABLE     "mainico.ico"
 
 STRINGTABLE DISCARDABLE 
 BEGIN
-    IDS_VERSION             "0.44"
+    IDS_VERSION             "0.52"
+    IDS_GAME_TEXFILENOTFOUND "Standard Texfile not found"
+    IDS_GAME_TEXFILEERROR   "Error reading standard Texfile"
+    IDS_MODULEMAP_PREPARETEXTURE 
+                            "Error in preparing texture in external module"
+    IDS_GAME_MAPDEFERR      "Map definition error"
+    IDS_GAME_SELECTION      "Selection stack error"
+    IDS_MODULE_MAPSELECTION "Error in selection map type"
+    IDS_MAP_TOONEIGHBOURS   "Too neighbours in map place "
+    IDS_MODULE_CANTLOAD     "Can't load %s library"
+    IDS_MODULE_INVALIDLIBRARY 
+                            "The library %s ins't a valid Minesweeper library"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_MODULE_VERSION      "The library %s is not a version supported"
+    IDS_MODULE_INVALIDMAPMOD "The library %s contains an invalid map module"
+    IDS_MODULE_TOOMAPS      "Too maps in %s library"
+    IDS_MODULE_INVALIDGAMEMOD "The library %s contains an invalid game module"
+    IDS_OPENGL_CHOOSEPIXELFORMAT 
+                            "ChoosePixelFormat() failed:\r\nCannot find a suitable pixel format"
+    IDS_OPENGL_SETPIXELFORMAT 
+                            "SetPixelFormat() failed:\r\nCannot set format specified"
+    IDS_MAIN_PERFTIMER      "Performance Timer not supported by hardware"
+    IDS_MAIN_STORESETTINGS  "Cannot store settings"
+    IDS_ABOUT               "MineSweeper 3D - Version "
+    IDS_MAIN_STANDARDLIBRARY 
+                            "Cannot find standard library! (plugins\\standard.dll)"
+    IDS_MAIN_MENUITEMS      "Error in handling menu items"
+    IDS_VARS_MAPENUM        "Map handling error in saving data"
+    IDS_VARS_DEFAULTSETTING "Default setting loaded"
 END
 
 #endif    // Italian (Italy) resources

@@ -1,0 +1,303 @@
+
+
+----------------------------------------------------------------
+Istruzioni per la costruzione di un plugin per MineSweeper v0.5:
+----------------------------------------------------------------
+MODULE VERSION 1.0
+
+
+******************************************************************************************
+1) COSTRUZIONE DEL WORKSPACE
+******************************************************************************************
+
+  Creare un workspace con un progetto di tipo "Win32 Dynamic-Link Library".
+
+  Eliminare il file "nomeworkspace.cpp" dal progetto.
+
+  Se si vogliono usare gli header precompilati:
+	Rinominare il file StdAfx.cpp in StdAfx.c (il progetto sarà tutto in C).
+
+	Operare nei settaggi del workspace in modo tale che "StdAfx.c" crei
+	il file PCH (Precompiled Headers) attraverso StdAfx.h e tutti gli altri
+	file ".c" del progetto usino il detto PCH attraverso StdAfx.h.
+
+  Le varie funzioni di MineSweeper dovranno essere scritte in "C" in appositi
+  file .c con la seguente intestazione:
+
+-8<-----------------------------------------------------------------------------
+    #define  THIS_IS_A_MODULE
+	#include "library.h"
+-8<-----------------------------------------------------------------------------
+
+	dove "library.h" è fornito con il kit di MineSweeper3D della versione corrente.
+
+
+******************************************************************************************
+2) FUNZIONE PRIMARIA
+******************************************************************************************
+
+   void		GetMineInfo (int * version [OUT], struct MINE_MODULE_INFO * module [OUT]);
+
+            La funzione deve settare i vari campi della variabile module passata
+			per indicare quali funzioni e che tipo di servizi offre la libreria:
+
+			struct MINE_MODULE_INFO {
+				char	name[32];
+			};
+
+			+ dove "name" è il nome unico della libreria.
+
+			In più, la funzione deve ritornare in "version" il valore 0x100 (V1.0).
+
+
+   
+******************************************************************************************
+3) DESCRIZIONE DELLE FUNZIONI
+******************************************************************************************
+ * A) MODULO MAPPA
+ *****************************************************************************************
+
+Da implementare tutte le seguenti funzioni:
+
+	void	GetMapCount (int * count [OUT]);					
+			
+			La funzione inserisce in "count" il numero di mappe diverse disponi-
+			bili nella libreria. Si farà riferimento ad esse tramite un naturale 
+			[0..count-1] identificato come mapIdx nelle funzioni successive.
+
+
+
+	void	GetMapName (int number [IN], char * name [OUT]);	
+
+			Ritorna in "name" il nome esteso della mappa indicata.
+			Il buffer "name" è di 32 caratteri.
+
+
+
+	void	BuildMap (int number [IN], struct MINESWEEPER_MAP * map [OUT]);	
+
+			Costruisce la mappa: deve riempire i campi indicati.
+
+			struct	MINESWEEPER_MAP {
+				DWORD	code;
+				int		nPlaces;
+				int		nVertexes;
+				int		initialMines;
+				struct MINESWEEPER_VERTEX	* vertex;
+				struct MINESWEEPER_FACE	* face;
+				struct MINESWEEPER_NEIGHBOUR *	neighbour;
+				int *	place;		
+				int		nMines;
+				int		nChecked;
+			};
+
+			+ code: RISERVATO
+			+ nPlaces: numero di facce della mappa.
+			+ nVertexes: numero di vertici della mappa.
+			+ initialMines: numero di mine in condizioni iniziali. initialMines <= nPlaces
+
+			+ vertex: array <da allocare> di
+				struct	MINESWEEPER_VERTEX {
+					float	x, y, z;
+				};
+
+				uno per ogni vertice.
+				
+			+ face: array <da allocare> di
+				struct	MINESWEEPER_FACE {
+					int		v[MAX_VERTEX_FACE];
+				};
+				
+				uno per ogni faccia.
+
+				NOTA: L'orientamento dell'enumerazione dei vertici determina il verso
+				      delle textures che verranno applicate alla casella.
+
+			+ neighbour: RISERVATO
+			+ place: RISERVATO
+			+ nMines: RISERVATO
+			+ nChecked: RISERVATO
+
+
+
+	void	ResetMap (int number [IN]);
+
+			Azzera la vista della mappa in gioco (number), riportando in posizione
+			di default le matrici di rotazione.
+			Viene chiamata anche all'inizio del gioco.
+
+
+
+	void	DestroyMap (int number [IN], struct MINESWEEPER_MAP * map [IN/OUT]);
+			
+			Distrugge la mappa indicata da number, deallocando i membri map->face
+			e map->vertex.
+			
+
+
+	int		MouseMove (int number [IN], int dx, int dy);
+
+			Effettua direttamente gli aggiornamenti della matrice di vista del modello del 
+			sistema OpenGL, che si presuppone già in modalità MODELVIEW.
+			Ritorna 1 se è necessario ridisegnare il quadro.
+			Viene chiamata con dx = dy = 0 all'inizio della partita.
+			IMPORTANTE: Non operare nello stack di matrici delle OpenGL.
+
+
+
+	void	SetCameraParams (int number [IN], int width [IN], int height [IN]);
+
+			Moltiplica la matrice di proiezione del sistema OpenGL (già in modalità 
+			PROJECTION) già presente nello stack con la matrice di prospettiva voluta.
+			In pratica si può tradurre con una sola chiamata a gluPerspective.
+			I parametri passati sono la grandezza, in pixel schermo, della viewport.
+			IMPORTANTE: Non operare nello stack di matrici delle OpenGL.
+
+
+
+
+  ******************************************************************************************
+  * B) MODULO GAMEDEFINE
+  ******************************************************************************************
+ 
+
+	void	GetGameName (char * name [OUT]);	
+
+			Ritorna in "name" il nome esteso del tipo di gioco disponibile.
+			Il buffer "name" è di 32 caratteri.
+
+
+
+	void	PrepareMap (struct MINESWEEPER_MAP * map [IN/OUT], 
+					    PLACENUMBER_TYPE PlaceNumber_callback	[IN]);
+
+			Sistema le mine e i "numeri di mina" nella mappa, lavorando sulle 
+			variabili indicate di seguito:
+
+			struct	MINESWEEPER_MAP {
+				DWORD	code;
+				int		nPlaces;
+				int		nVertexes;
+				int		initialMines;
+				struct	MINESWEEPER_VERTEX	* vertex;
+				struct	MINESWEEPER_FACE	* face;
+				struct	MINESWEEPER_NEIGHBOUR *	neighbour;
+				int *	place;		
+				int		nMines;
+				int		nChecked;
+			};
+
+			+ code: RISERVATO
+			+ nPlaces [READ_ONLY]: numero di facce della mappa.
+			+ nVertexes: RISERVATO
+			+ initialMines [READ_ONLY]: numero di mine in condizioni iniziali. 
+			+ vertex: RISERVATO
+			+ face: RISERVATO 
+			+ neighbour: [READ_ONLY]: array [0..nPlaces] di 
+
+				struct MINESWEEPER_NEIGHBOUR {
+					int		n[MAX_NEIGHBOUR];
+				};
+
+				Per ogni elemento dell'array, *n è a sua volta un array di indici di "place"
+				adiacenti al place in questione. MAX_NEIGHBOUR vale 12. I primi valori del-
+				l'array sono quelli validi, seguono -1 di padding.
+
+			+ place: array [0..nPlaces-1] di interi, che devono essere una combi-
+			  nazione (bitwise OR) dei seguenti flags:
+
+					MAP_PLACE_CLEAR:	casella senza mina, scoperta
+					MAP_PLACE_MINE:		casella con mina
+					MAP_PLACE_COVERED:	casella coperta
+					MAP_PLACE_FLAG:		bandiera
+
+			   In più, gli 8 bit meno significativi dell'intero indicano il numero
+		      di mine nelle vicinanze.
+			    ES: casella '3' scoperta:		   MAP_PLACE_CLEAR | 3
+				    casella con mina e bandiera:   MAP_PLACE_MINE | MAP_PLACE_FLAG
+				Ricapitolando, ogni intero caratterizzante la mappa è allocato così:
+				        
+					   31                                 0
+						xxxx---- -------- -------- xxxxxxxx
+
+				Si possono usare i bit segnati da "-" definendo nuove funzioni.
+
+			+ nMines: RISERVATO
+			+ nChecked: RISERVATO
+
+		La variabile PlaceNumber_callback è un puntatore a funzione così definita:
+			void	PlaceNumber ();
+
+		che sistema in tutti i "place" di gioco un numero (utilizzando gli 8 bit meno
+		significativi) che indica il numero di mine che la circondano, facendo una
+		scansione sull'array neighbour.
+
+
+
+	int		MouseButton		   (	int msg									[IN], 
+									int * buttons							[IN/OUT],
+									int * gameStatus						[IN/OUT], 
+									SELECTFACE_TYPE SelectFace_callback		[IN],
+									struct MINESWEEPER_MAP * map			[IN/OUT]  );
+
+			Riceve il messaggio di click di un tasto del mouse, e provvede ad eseguire
+			le procedure di gioco.
+
+			+ msg: può essere uno dei seguenti comandi:
+				WM_LBUTTONDOWN:		tasto sinistro premuto
+				WM_RBUTTONDOWN:		tasto destro premuto
+				WM_LBUTTONUP:		tasto sinistro rilasciato
+				WM_RBUTTONUP:		tasto destro rilasciato
+
+			+ buttons: variabile int che mantiene lo stato dei tasti del mouse premuti.
+						flags (bitwise OR):
+							MINE_LBUTTON:	tasto sinistro premuto
+							MINE_RBUTTON:	tasto destro premuto
+							MINE_UNLOCK:	se viene selezionato questo flag, indica che
+											il puntatore del mouse va rilasciato.
+
+			+ gameStatus: indica in che stato del gioco ci si trovi:
+					
+						GAME_STATUS_NORMAL:			in gioco
+						GAME_STATUS_ENDED_LOST:		gioco perso
+						GAME_STATUS_ENDED_WIN:		gioco vinto
+						GAME_STATUS_STOPPED:		gioco non definito, tipicamente all'avvio
+
+			+ SelectFace_callback: indirizzo di una funzione così definita:
+					DWORD	SelectFace_callback (int * face)
+
+					che ritorna in face l'indice della faccia selezionata dal puntatore, oppure
+					-1 in caso di selezione nulla. Ritorna 0 se tutto ok, altrimenti un
+					codice di errore.
+
+			+ map: struttura mappa, definita qui sopra. Si può operare solo sul campo
+			       "place", il resto dei membri è READ_ONLY.
+
+	
+			La funzione torna 1 se è necessario ridisegnare il quadro.
+
+
+
+
+	int		GetTextureName (int place [IN], GLuint * texName);
+	   ritorna 0 se deve usare quella di default.
+
+
+
+	DWORD	PrepareTextures (int filtering);
+		Costruisce textures. Ritorna un codice di errore (IDS_MODULEMAP_PREPARETEXTURE) o 0.
+
+
+	int		FreeTextures ();
+		Le distrugge
+
+
+
+  ******************************************************************************************
+  * B) MODULO GRAPHICS
+  ******************************************************************************************
+
+
+
+
+

@@ -1,9 +1,12 @@
 
 
 #include "stdafx2.h"
-#include "map.h"
+#include "library.h"
 #include "vars.h"
+#include "display.h"
+#include "modules.h"
 
+#include "resource.h"
 
 #undef __DEBUG_MAP_				// Abilita l'errore "too few vertices for place"
 
@@ -13,7 +16,7 @@
 static 	GLuint screenViewport [4];
 
 /* FONT */
-static GLuint fontOffset;
+static  GLuint fontOffset;
 #define CROSSHAIR 2
 
 /* FILE IMAGE */
@@ -30,53 +33,50 @@ static int texRows = 1, texColumns = 15;
 static GLuint * texName = NULL;
 static GLfloat * texVertex = NULL;
 
-/* Mappa */
-extern 	struct MINESWEEPER_MAP map;
-struct	MAP_POLY {
-		// Numero di triangoli
-		int		nTri;
-		// Array [0..nTri-1], contiene indice di faccia del triangolo, secondo la mappa del gioco
-		int		* triIdx;
-		// Array [0..nTri*9] contenente in ordine tutti i vertici [x,y,z] di tutti i triangoli
-		GLfloat	* triV;
+/* MAPPA */
+extern struct 	MINESWEEPER_MAP	   	map;
 
-		// Numero di altri poliogoni (lati > 3)
-		int		nOthers;
-		// Array [0..nOthers-1], contiene indice di faccia del poli, secondo la mappa del gioco
-		int		* othersIdx;
-		// Array [0..nOthers-1], contiene il numero di facce dei poligoni enumerati
-		int		* othersNVx;			
-		// Array [0..] contenente in ordine tutti i vertici [x,y,z] di tutti i poly
-		GLfloat * othersV;
-} mapPoly = {0, NULL, NULL, 0, NULL, NULL, NULL};
+struct	STRUCTUREMAP_POLY {
+		// Numero di poligoni (facce)
+		int		nPoly;
+		// Array [0..nPloy-1], contiene indice di faccia del poli, secondo la mappa del gioco
+		int		* polyIdx;
+		// Array [0..nPoly-1], contiene il numero di lati dei poligoni enumerati
+		int		* polyNVx;			
+		// Array [0..] contenente *in ordine* tutti i vertici [x,y,z] di tutti i poly
+		GLfloat * vertexes;
+} mapPoly = {0, NULL, NULL, NULL};
 
 /* SELECT */
 #define MAX_HITBUFSIZE 512
 
 /* Mouse buttons */
-static  int buttons = 0;
+static  int mButtons = 0;
 static  GLfloat precision = 1.0;
-#define X_SENS 2.25e-03f
-#define Y_SENS 2.25e-03f
 
 /* GAME */
-static int gamePaused = 0;
-static int game = 0;
-static int time = 0;
-static int ended = 0;
-	   int youWin = 0, youLose = 0, youWinRecord = 0;
-static GLfloat rot[16] = {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
+	   unsigned int timer = 0;
+	   int gameStatus = GAME_STATUS_STOPPED;
 
-/* OPENGL */
-#define Z_VIEW -3.6f
-#define Z_MIN  0.1f
-#define Z_MAX  10.0f
-#define FOV    32.0f		
+static int gamePaused = 1;				// per crosshair
 
 
 extern struct GLOBAL_VARS vars;
+extern struct RECORD * recordArray;
 
+/* FUNCTIONS DLL */
+int						mapIndex;
+BUILDMAP_TYPE			p_BuildMap;
+DESTROYMAP_TYPE			p_DestroyMap;
+MOUSEMOVE_TYPE			p_MouseMove;
+SETCAMERAPARAMS_TYPE	p_SetCameraParams;
+RESETMAP_TYPE			p_ResetMap;
 
+MOUSEBUTTON_TYPE		p_MouseButton = NULL;
+PREPAREMAP_TYPE			p_PrepareMap = NULL;
+GETTEXTURENAME_TYPE		p_GetTextureName = NULL;
+PREPARETEXTURES_TYPE	p_PrepareTextures = NULL;
+FREETEXTURES_TYPE		p_FreeTextures = NULL;
 
 
 // ------------------------------------------------------- FONT
@@ -137,7 +137,7 @@ GLubyte letters[][11] = {
 
 
 
-void makeRasterFont(void)
+static void makeRasterFont(void)
 {
    GLuint i, j;
    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);    
@@ -166,7 +166,7 @@ void makeRasterFont(void)
 }
 
 
-void printString(char *s)
+static void printString(char *s)
 {
    glPushAttrib (GL_LIST_BIT);
    glListBase(fontOffset);
@@ -203,11 +203,9 @@ void printString(char *s)
 
 
 
-int		buildTextures()
+static DWORD	buildTextures()
 {
 	int texNum, i, j, p, width, height;
-	double angle, incAngle;
-	GLfloat u, v;
 
 	char * buffer;
 	FILE * file;
@@ -221,14 +219,12 @@ int		buildTextures()
 
 	buffer = malloc (width * height * 3);
 	file = fopen (texFileName, "rb");
-	if (file == NULL) {
-	    MessageBox(NULL, "Texfile not found", "Error", MB_OK);
-		return 0;
-	}
-	if (fread (buffer, width * height * 3, 1, file) != 1) {
-	    MessageBox(NULL, "Texfile error", "Error", MB_OK);
-	    return 0;
-	}
+	if (file == NULL) 
+		return IDS_GAME_TEXFILENOTFOUND;
+
+	if (fread (buffer, width * height * 3, 1, file) != 1) 
+		return IDS_GAME_TEXFILEERROR;
+
 	fclose (file);
 
 
@@ -269,34 +265,19 @@ int		buildTextures()
 						  
 	free (buffer);
 
-	/* Costruisce la tabella dei vertici in coordinate u,v */
-	texVertex = (GLfloat *) malloc (sizeof (GLfloat) * MAX_VERTEX_FACE * 2 * (MAX_VERTEX_FACE - 2));
-	for (i = 3; i < MAX_VERTEX_FACE; i++) {
-		incAngle = 3.141592 * 2 / i;
-		angle = 3.141592 * 3 / 2 - incAngle;
-		for (j = 0; j < i; j++, angle += incAngle) {
-			u = (GLfloat) (cos (angle) / 2 + 0.5);
-			v = (GLfloat) (sin (angle) / 2 + 0.5);
-			texVertex [((i-3) * MAX_VERTEX_FACE * 2) + j * 2] = u;
-			texVertex [((i-3) * MAX_VERTEX_FACE * 2) + j * 2 + 1] = v;
-		}
-	}
-
-	return 1;
+	return p_PrepareTextures(vars.filtering);			// Extern textures
 }
 
 
-void	freeTextures()
+static void	freeTextures()
 {
 	free (texName);
 	texName = NULL;
-	free (texVertex);
-	texVertex = NULL;
+	p_FreeTextures();				// Extern textures
 }
 
 
-
-int	 rebuildTextures()
+DWORD rebuildTextures()
 {
 	freeTextures();
 	return buildTextures();
@@ -330,6 +311,27 @@ int	 rebuildTextures()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ------------------------------------------------------- OBJECTS
 // ------------------------------------------------------- OBJECTS
 // ------------------------------------------------------- OBJECTS
@@ -337,101 +339,66 @@ int	 rebuildTextures()
 
 
 
-int		buildStructure ()
+static DWORD  buildStructure ()
 {
 	// Crea la MAP_POLY
 	int i, j, k, nvo;
-	int triP, othP, triIP, othIP;
+	int othP, othIP;
 
 	nvo = 0;
-	mapPoly.nTri = 0;
-	mapPoly.nOthers = 0;
+	mapPoly.nPoly = 0;
 
-	// Conta triangoli e altre facce
+	// Conta facce
 	for (i = 0; i < map.nPlaces; i++) {
 		for (j = 0; j < MAX_VERTEX_FACE; j++)
 			if (map.face->v[j] == -1) break;
-		if (j < 3) {
-#ifndef __DEBUG_MAP_
-		    MessageBox(NULL, "Map definition error.", "Error", MB_OK);
-		    return 0;
-#else
-			continue;
-#endif
-		}
-		else if (j == 3)
-			mapPoly.nTri++;
-		else 
-			mapPoly.nOthers++, nvo += j; 
+		if (j < 3) 
+			return IDS_GAME_MAPDEFERR;
+		mapPoly.nPoly++, nvo += j; 
 	}
 
 	// Crea buffers
-	if (mapPoly.nOthers > 0) {
-		mapPoly.othersNVx = (int*) malloc (sizeof(int) * mapPoly.nOthers);
-		mapPoly.othersV = (GLfloat*) malloc (sizeof(GLfloat) * nvo * 3);
-		mapPoly.othersIdx = (int*) malloc (sizeof(int) * mapPoly.nOthers);
-	}
-	if (mapPoly.nTri > 0) {
-		mapPoly.triV = (GLfloat*) malloc (sizeof (GLfloat) * mapPoly.nTri * 9);	
-		mapPoly.triIdx = (int*) malloc (sizeof (int) * mapPoly.nTri);
+	if (mapPoly.nPoly > 0) {
+		mapPoly.polyNVx = (int*) malloc (sizeof(int) * mapPoly.nPoly);
+		mapPoly.vertexes = (GLfloat*) malloc (sizeof(GLfloat) * nvo * 3);
+		mapPoly.polyIdx = (int*) malloc (sizeof(int) * mapPoly.nPoly);
 	}
 
 	// Copia
-	triP = 0;
 	othP = 0;
-	triIP = 0;
 	othIP = 0;
 
 	for (i = 0; i < map.nPlaces; i++) {
 		for (j = 0; j < MAX_VERTEX_FACE; j++)
 			if (map.face->v[j] == -1) break;
-		if (j < 3)
-			continue;
-		if (j == 3) {
-			// Nuovo triangolo
-			mapPoly.triIdx[triIP++] = i; 
 
-			for (k = 0; k < 3; k++) {
-				mapPoly.triV[triP++] = map.vertex[map.face[i].v[k]].x;
-				mapPoly.triV[triP++] = map.vertex[map.face[i].v[k]].y;
-				mapPoly.triV[triP++] = map.vertex[map.face[i].v[k]].z;
-			}
-		}
-		else {
-			// Nuovo poligono
-			mapPoly.othersIdx[othIP] = i;
-			mapPoly.othersNVx[othIP++] = j;
+		// Nuovo poligono
+		mapPoly.polyIdx[othIP] = i;
+		mapPoly.polyNVx[othIP++] = j;
 			
-			for (k = 0; k < j; k++) {
-				mapPoly.othersV[othP++] = map.vertex[map.face[i].v[k]].x;
-				mapPoly.othersV[othP++] = map.vertex[map.face[i].v[k]].y;
-				mapPoly.othersV[othP++] = map.vertex[map.face[i].v[k]].z;
-			}
+		for (k = 0; k < j; k++) {
+			mapPoly.vertexes[othP++] = map.vertex[map.face[i].v[k]].x;
+			mapPoly.vertexes[othP++] = map.vertex[map.face[i].v[k]].y;
+			mapPoly.vertexes[othP++] = map.vertex[map.face[i].v[k]].z;
 		}
 	}	
 	
-	return 1;
+	return 0;
 }
 
 
-void	freeMap ()
+static void	freeStructure ()
 {
-	if (mapPoly.othersV)
-		free (mapPoly.othersV);
-	if (mapPoly.othersNVx)
-		free (mapPoly.othersNVx);
-	if (mapPoly.othersIdx)
-		free (mapPoly.othersIdx);
-	if (mapPoly.triV)
-		free (mapPoly.triV);
-	if (mapPoly.triIdx)
-		free (mapPoly.triIdx);
+	if (mapPoly.vertexes)
+		free (mapPoly.vertexes);
+	if (mapPoly.polyNVx)
+		free (mapPoly.polyNVx);
+	if (mapPoly.polyIdx)
+		free (mapPoly.polyIdx);
 
-	mapPoly.othersV = NULL;
-	mapPoly.othersNVx = NULL;
-	mapPoly.othersIdx = NULL;
-	mapPoly.triV = NULL;
-	mapPoly.triIdx = NULL;
+	mapPoly.vertexes = NULL;
+	mapPoly.polyNVx = NULL;
+	mapPoly.polyIdx = NULL;
 }
 
 
@@ -471,7 +438,7 @@ void	freeMap ()
 // ------------------------------------------------------- HITS
 
 
-int		selectFace (int x, int y)
+static DWORD selectFace (int * face)
 {
 	int i, j, p, hit, c;
 	static GLuint selectBuf[MAX_HITBUFSIZE];
@@ -488,29 +455,18 @@ int		selectFace (int x, int y)
     glMatrixMode (GL_PROJECTION);
 	glPushMatrix();
     glLoadIdentity ();
-    gluPickMatrix ((GLdouble) x, (GLdouble) (screenViewport[3] - y),
+
+    gluPickMatrix ((GLdouble)screenViewport[2] / 2.0, (GLdouble)screenViewport[3] / 2.0,
                     precision, precision, screenViewport);
-    gluPerspective(FOV, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
+
+	p_SetCameraParams (mapIndex, screenViewport[2], screenViewport[3]); 
 
 	p = 0;
-	if (mapPoly.nTri > 0) {
-		for (i = 0; i < mapPoly.nTri; i++) {
-			glLoadName (mapPoly.triIdx[i]);
-			glBegin (GL_TRIANGLES);
-			glVertex3fv (mapPoly.triV + p);
-			glVertex3fv (mapPoly.triV + p + 3);
-			glVertex3fv (mapPoly.triV + p + 6);
-			glEnd();
-			p += 9;
-		}
-	}
-
-	p = 0;
-	for (i = 0; i < mapPoly.nOthers; i++) {
-		glLoadName (mapPoly.othersIdx[i]);
+	for (i = 0; i < mapPoly.nPoly; i++) {
+		glLoadName (mapPoly.polyIdx[i]);
 		glBegin (GL_POLYGON);
-		for (j = 0; j < mapPoly.othersNVx[i]; j++) {
-			glVertex3fv (mapPoly.othersV + p);
+		for (j = 0; j < mapPoly.polyNVx[i]; j++) {
+			glVertex3fv (mapPoly.vertexes + p);
 			p += 3;
 		}
 		glEnd();
@@ -528,11 +484,8 @@ int		selectFace (int x, int y)
 	hit = -1;
 	c = 0;
 	for (i = 0; i < hits; i++) {
-		if (selectBuf[p] != 1) {
-		    MessageBox(NULL, "Selection stack error", "Error", MB_OK);
-			p += 3 + selectBuf[p];
-			continue;
-		}
+		if (selectBuf[p] != 1) 
+			return IDS_GAME_SELECTION;
 		if (selectBuf[p+1] < z)
 			z = selectBuf[p+1], hit = (int)selectBuf[p+3], c = 0;
 		else if (selectBuf[p+1] == z)
@@ -540,7 +493,8 @@ int		selectFace (int x, int y)
 		p += 4;
 	}
 
-	return (c == 0) ? hit : -1;
+	*face = (c == 0) ? hit : -1;
+	return 0;
 }
 
 
@@ -611,211 +565,24 @@ int		selectFace (int x, int y)
 
 
 
-// ------------------------------------------------ MOUSE EVENTS
-// ------------------------------------------------ MOUSE EVENTS
-// ------------------------------------------------ MOUSE EVENTS
-// ------------------------------------------------ MOUSE EVENTS
-
-
-
-void	mult (GLfloat * m1, GLfloat * m2, GLfloat * r)
+int		processMouseButton (int msg, int x, int y, int * unlock)
 {
-	int i, j, k;
-	
-	for (i = 0; i < 3; i++)				// i riga
-		for (j = 0; j < 3; j++) {		// j colonna
-			r[i + j * 4] = 0;
-			for (k = 0; k < 3; k++)
-				r[i + j * 4] += m1[i + k * 4] * m2[j * 4 + k];
-		}
-}
+	int redraw;
 
-
-
-int		mouseMove(int dx, int dy)
-{
-	GLfloat x, y, cf, sf, ct, st;
-	static GLfloat	rotxy[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}, 
-					r[16]     = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
-
-	y = dy * X_SENS;
-	x = dx * Y_SENS;
-	
-	ct = (float)cos (x), st = (float)sin (x);
-	cf = (float)cos (y), sf = (float)sin (y);
-
-	rotxy[0] = ct, rotxy[1] = st*sf, rotxy[2] = -st*cf;
-	rotxy[5] = cf, rotxy[6] = sf;
-	rotxy[8] = st, rotxy[9] = -sf*ct, rotxy[10] = ct*cf;
-	
-	mult (rotxy, rot, r);
-	memcpy (rot, r, sizeof (GLfloat) * 16);
-
-	glLoadIdentity();
-	glTranslatef (0.0, 0.0, Z_VIEW);
-	glMultMatrixf (rot);
-
-	return 1;
-}
-
-
-
-
-void	totalSweeper(int uncover)
-{
-	int i;
-	for (i = 0; i < map.nPlaces; i++) {
-		if (map.place[i] & MAP_PLACE_FLAG && !(map.place[i] & MAP_PLACE_MINE))
-			map.place[i] |= MAP_PLACE_FALSEFLAG;
-		if (map.place[i] & MAP_PLACE_MINE && !(map.place[i] & MAP_PLACE_FLAG))
-			if (uncover)
-				map.place[i] &= ~(MAP_PLACE_COVERED);
-			else
-				map.place[i] |= MAP_PLACE_FLAG;
-	}
-}
-
-
-
-
-// Ritorna 1 se il campo è finito!
-int		secureSweeper (int idx)
-{
-	int i = -1, neigh;
-	int end = 0;
-
-#ifdef _DEBUG
-	if (map.place[idx] & MAP_PLACE_COVERED == 0)
-		__asm {int 3}
-#endif
-
-	map.place[idx] &= (~MAP_PLACE_COVERED);
-	map.nChecked++;
-
-	if ((map.place[idx] & MAP_PLACE_NUMMASK) != 0)
-		return (map.nChecked + map.nTotalMines == map.nPlaces);
-
-	while (i++, ((neigh = map.neighbour[idx].n[i]) != -1) && i < MAX_NEIGHBOURS)
-		if (map.place[neigh] & MAP_PLACE_COVERED && !(map.place[neigh] & MAP_PLACE_FLAG)) 
-			if (secureSweeper (neigh))
-				end = 1;
-
-	return end;
-}
-
-
-
-int		mouseButton (UINT msg, int x, int y, int * unlock)
-{
-	int hit, k, n, err, flag, a;
-
-	*unlock = 0;
-	if (!game) {
+	if (gameStatus == GAME_STATUS_STOPPED) {
 		*unlock = 1;
 		return 0;
 	}
 
-	switch (msg) {
-	case WM_LBUTTONDOWN:
-		buttons |= 1;
-		return 0;
+	mButtons &= ~MINE_UNLOCK;
+	redraw = p_MouseButton (msg, &mButtons, &gameStatus, selectFace, &map);
+	*unlock = (mButtons & MINE_UNLOCK) ? 1 : 0;
 
-	case WM_RBUTTONDOWN:
-		buttons |= 2;
-		if (ended)
-			return 0;
+	if (gameStatus == GAME_STATUS_ENDED_WIN) 
+		if (timer / 10 < recordArray->record)
+			gameStatus = GAME_STATUS_ENDED_WINRECORD;
 
-		hit = selectFace (x, y);
-		if (hit == -1)
-			return 0;
-		if (!(map.place[hit] & MAP_PLACE_COVERED))
-			return 0;
-
-		map.place[hit] ^= MAP_PLACE_FLAG;
-		if (map.place[hit] & MAP_PLACE_FLAG)
-			map.nMines--;
-		else
-			map.nMines++;
-		return 1;
-
-	case WM_LBUTTONUP:
-	case WM_RBUTTONUP:
-		
-		if (ended) {
-			*unlock = 1;
-			return 0;
-		}
-
-		hit = selectFace (x, y);
-		if (hit == -1)
-			return 0;
-
-		if (msg == WM_LBUTTONUP && buttons == 1) {
-			buttons = 0;
-			if ((!(map.place[hit] & MAP_PLACE_COVERED)) ||
-				map.place[hit] & MAP_PLACE_FLAG) 
-				return 0;
-
-			if (map.place[hit] & MAP_PLACE_MINE) {
-				totalSweeper(1);
-				ended = youLose = 1;
-				return 1;		
-			}
-			if (secureSweeper (hit)) {
-				ended = youWin = *unlock = 1;			// finito!
-				if (time / 10 < vars.hallsOfFame[map.typeIndex].time)
-					vars.hallsOfFame[map.typeIndex].time = time / 10, youWinRecord = 1;
-				map.nMines = 0;
-				totalSweeper(0);
-			}
-			return 1;
-		}
-		else if (msg == WM_RBUTTONUP && !(buttons & 1)) {
-			buttons &= ~2;
-			return 0;
-		}
-		else if (buttons == 3) {
-			// Proc. doppio tasto
-			buttons = 0;
-			n = map.place[hit] & MAP_PLACE_NUMMASK;
-			if (map.place[hit] & MAP_PLACE_COVERED || n == 0)
-				return 0;
-			
-			err = flag = 0;
-			for (k = 0; k < MAX_NEIGHBOURS && map.neighbour[hit].n[k] != -1; k++) {
-				a = map.place[map.neighbour[hit].n[k]] & (MAP_PLACE_MINE | MAP_PLACE_FLAG);
-				if (a != 0 && a != (MAP_PLACE_MINE | MAP_PLACE_FLAG))
-					err++;
-				if (a & MAP_PLACE_FLAG)
-					flag++;
-			}
-			if (err == 0) {
-				k = -1;
-				while (k++, ((n = map.neighbour[hit].n[k]) != -1) && k < MAX_NEIGHBOURS)
-					if (map.place[n] & MAP_PLACE_COVERED && !(map.place[n] & MAP_PLACE_FLAG)) 
-						if (secureSweeper (n))
-							ended = 1;
-
-				if (ended) {
-					youWin = *unlock = 1;			// finito!
-					if (time / 10 < vars.hallsOfFame[map.typeIndex].time)
-						vars.hallsOfFame[map.typeIndex].time = time / 10, youWinRecord = 1;
-					map.nMines = 0;
-					totalSweeper(0);
-				}
-				return 1;
-			}
-			else if (flag != n)
-				return 0;
-			// Esplode
-			totalSweeper(1);
-			ended = youLose = 1;
-			return 1;
-		}
-
-	default:
-		return 0;
-	}
+	return redraw;
 }
 
 
@@ -854,106 +621,112 @@ int		mouseButton (UINT msg, int x, int y, int * unlock)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ------------------------------------------------------- GL
 // ------------------------------------------------------- GL
 // ------------------------------------------------------- GL
 // ------------------------------------------------------- GL
 
 
-void	setMatrix()
+
+DWORD	oglInit()
 {
-	glMatrixMode (GL_MODELVIEW);
-	glPushMatrix();
-	glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(FOV, (float) screenViewport[2] / screenViewport[3], Z_MIN, Z_MAX);
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
-}
-
-
-
-int		oglInit()
-{
+	double angle, incAngle;
+	GLfloat u, v;
+	int i, j;
+	DWORD err;
+	
 	glEnable (GL_DEPTH_TEST);
 
 	makeRasterFont();
-	if (!buildTextures())
-		return 0;
+	if ((err = buildTextures()) != 0)
+		return err;
 
-	setMatrix();
-
-	game = 0;
-	return 1;
-}
-
-
-
-int		gameInit(int rebuild)
-{
-	int i;
-
-	if (rebuild) {
-		GLint nbits[3];
-
-		// Cerca il numero di bit per colore disponibile
-		glGetIntegerv (GL_RED_BITS, nbits);
-		glGetIntegerv (GL_GREEN_BITS, nbits+1);
-		glGetIntegerv (GL_BLUE_BITS, nbits+2);
-		if ((1 << (nbits[0] + nbits[1] + nbits[2])) < map.nPlaces) {
-		    MessageBox(NULL, "Impossible to build colormap (bitperpixel insufficient", 
-					   "Error", MB_OK);
-		    return 0;
+	/* Costruisce la tabella dei vertici in coordinate u,v */
+	if (texVertex != NULL)
+		free (texVertex);
+	texVertex = (GLfloat *) malloc (sizeof (GLfloat) * MAX_VERTEX_FACE * 2 * (MAX_VERTEX_FACE - 2));
+	for (i = 3; i < MAX_VERTEX_FACE; i++) {
+		incAngle = 3.141592 * 2 / i;
+		angle = 3.141592 * 3 / 2 - incAngle;
+		for (j = 0; j < i; j++, angle += incAngle) {
+			u = (GLfloat) (cos (angle) / 2 + 0.5);
+			v = (GLfloat) (sin (angle) / 2 + 0.5);
+			texVertex [((i-3) * MAX_VERTEX_FACE * 2) + j * 2] = u;
+			texVertex [((i-3) * MAX_VERTEX_FACE * 2) + j * 2 + 1] = v;
 		}
-
-
-		if (!buildStructure())
-			return 0;
 	}
 
-	setMatrix();
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glTranslatef (0, 0, Z_VIEW);
-
-	gamePaused = game = 1;
-	ended = youWin = youLose = youWinRecord = 0;
-
-	for (i = 0; i < 16; i++)
-		rot[i] = 0;
-	rot[0] = rot[5] = rot[10] = rot[15] = 1;
-
-	return 1;
+	gameStatus = GAME_STATUS_STOPPED;
+	return 0;
 }
-
-
-void	gameClose(int destroy)
-{
-	if (destroy)
-		freeMap();
-	game = 0;
-}
-
-
-void	oglClose ()
-{
-	freeTextures();
-}
-
-
-
-
 
 
 
 
 void	timerSet (int t)
 {
-	if (!ended)
-		time = t;
+	if (gameStatus != GAME_STATUS_ENDED_WIN && gameStatus != GAME_STATUS_ENDED_LOST)
+		timer = t;
 }
 
 
+void	resetGame()
+{
+	gamePaused = 1;
+	gameStatus = GAME_STATUS_NORMAL;
+	timerSet (0);
+}
+
+
+
+void	gameClose(int destroy)
+{
+	if (destroy)
+		freeStructure();
+	gameStatus = GAME_STATUS_STOPPED;
+}
+
+
+void	oglClose ()
+{
+	freeTextures();
+	free (texVertex);
+}
 
 
 
@@ -966,7 +739,15 @@ void	changeWindowSize(int width, int height)
 
     glViewport(0, 0, (GLsizei) width, (GLsizei) height);
 
-	setMatrix();
+	if (p_SetCameraParams != NULL) {
+		glMatrixMode(GL_MODELVIEW);
+		glPushMatrix();
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		p_SetCameraParams (mapIndex, screenViewport[2], screenViewport[3]);
+		glMatrixMode(GL_MODELVIEW);
+		glPopMatrix();
+	}
 }
 
 
@@ -992,23 +773,62 @@ void	unpause()
 
 
 
+DWORD	newGame(DWORD code)
+{
+	int changed;
+	DWORD err;
+
+	changed = map.code != code;
+	gameClose(changed);
+
+	if (changed) {
+		if (p_DestroyMap != NULL)
+			p_DestroyMap (mapIndex, &map);
+		postDestroyMap ();
+	
+		err = UpdateMapFunctions (code); 
+		
+		if (err)
+			return err;
+		
+		p_BuildMap (mapIndex, &map);
+		err = postBuildMap (); 
+		if (err) 
+			return err;
+	}
+
+	map.code = code;
+	map.nMines = map.nChecked = 0;
+
+	p_PrepareMap (&map, placeNumbers);					// mette le mine
+	
+	if (changed) 
+		return buildStructure();
+	return 0;
+}
+
+
+
+
+
 
 void	updateDisplay()
 {
-	int i, j, p, idx, m;
+	int i, j, k, p, idx, m, ext;
+	GLuint name;
 	char string[10];
 	char cross[2];
 
-	if (youLose)
+	if (gameStatus == GAME_STATUS_ENDED_LOST)
 	    glClearColor (0.6f, 0, 0, 0);
-	else if (youWin)
+	else if (gameStatus == GAME_STATUS_ENDED_WIN)
 		glClearColor (0.0f, 0.4f, 0.0f, 0);
 	else 
 		glClearColor (0.1f, 0.2f, 0.3f, 0);
 		
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (!game) {
+	if (gameStatus == GAME_STATUS_STOPPED) {
 	    glFlush();
 		return;
 	}
@@ -1018,82 +838,67 @@ void	updateDisplay()
 	
 	glColor3f (0,0,0);				// per linee
 
-	// WIREFRAME
+	// ***************************** WIREFRAME
 	p = 0;
-	if (mapPoly.nTri > 0) 
-		for (i = 0; i < mapPoly.nTri; i++) {
-			glBegin (GL_LINE_STRIP);
-			glVertex3fv (mapPoly.triV + p);
-			glVertex3fv (mapPoly.triV + p + 3);
-			glVertex3fv (mapPoly.triV + p + 6);
-			glEnd();
-			p += 9;
-		}
-	
-	// TEXTURING
-	if (mapPoly.nTri > 0) {
-		p = 0;
-		for (i = 0; i < mapPoly.nTri; i++) {
-			idx = mapPoly.triIdx[i];
-			if (map.place[idx] & MAP_PLACE_FALSEFLAG)
-				i = i;
-			if (map.place[idx] & MAP_PLACE_COVERED && !(map.place[idx] & MAP_PLACE_FLAG)) {
-				glDisable (GL_TEXTURE_2D);
-				glColor3f (0.5, 0.5, 0.5);
-				glBegin (GL_TRIANGLES);
-				glVertex3fv (mapPoly.triV + p);
-				glVertex3fv (mapPoly.triV + p + 3);
-				glVertex3fv (mapPoly.triV + p + 6);
-				glEnd();
-			}
-			else if (map.place[idx] == 0)
-			{
-				glDisable (GL_TEXTURE_2D);
-				glColor3f (0.75, 0.75, 0.75);
-				glBegin (GL_TRIANGLES);
-				glVertex3fv (mapPoly.triV + p);
-				glVertex3fv (mapPoly.triV + p + 3);
-				glVertex3fv (mapPoly.triV + p + 6);
-				glEnd();
-			}
-			else {
-				glEnable (GL_TEXTURE_2D);
-				m = map.place[idx];
-				if (m & MAP_PLACE_FALSEFLAG)
-					m = TEX_FLAGCROSSED;
-				else if (m & MAP_PLACE_FLAG)
-					m = TEX_FLAG;
-				else if (m & MAP_PLACE_MINE)
-					m = TEX_MINE;
-				else
-					m = TEX_NUMBASE + (m & MAP_PLACE_NUMMASK);
-				glBindTexture(GL_TEXTURE_2D, texName[m]);
-				glBegin (GL_TRIANGLES);
-				glTexCoord2f (texVertex[0], texVertex[1]);
-				glVertex3fv (mapPoly.triV + p);
-				glTexCoord2f (texVertex[2], texVertex[3]);
-				glVertex3fv (mapPoly.triV + p + 3);
-				glTexCoord2f (texVertex[4], texVertex[5]);
-				glVertex3fv (mapPoly.triV + p + 6);
-				glEnd();
-			}
-			p += 9;
-		}
-		glDisable (GL_TEXTURE_2D);
-	}
-
-	p = 0;
-	for (i = 0; i < mapPoly.nOthers; i++) {
-		glBindTexture(GL_TEXTURE_2D, texName[rand() % 3]);
-		glBegin (GL_POLYGON);
-		for (j = 0; j < mapPoly.othersNVx[i]; j++) {
-			glColor3f ((float)rand() / RAND_MAX, (float)rand() / RAND_MAX, (float)rand() / RAND_MAX);
-			glVertex3fv (mapPoly.othersV + p);
+	for (i = 0; i < mapPoly.nPoly; i++) {
+		glBegin (GL_LINE_STRIP);
+		for (j = 0; j < mapPoly.polyNVx[i]; j++) {
+			glVertex3fv (mapPoly.vertexes + p);
 			p += 3;
 		}
 		glEnd();
 	}
-	
+		
+		
+	// ****************************** TEXTURING
+	p = 0;
+	for (i = 0; i < mapPoly.nPoly; i++) {
+		idx = mapPoly.polyIdx[i];
+		m = map.place[idx];
+
+		ext = p_GetTextureName (m, &name);
+		// Override personal textures
+		if (m & MAP_PLACE_COVERED && !(m & MAP_PLACE_FLAG) && !ext) {
+			glDisable (GL_TEXTURE_2D);
+			glColor3f (0.5, 0.5, 0.5);
+			glBegin (GL_POLYGON);
+			for (j = 0; j < mapPoly.polyNVx[i]; j++, p+=3)
+				glVertex3fv (mapPoly.vertexes + p);
+			glEnd();
+		}
+		else if (m == 0 && !ext)
+		{
+			glDisable (GL_TEXTURE_2D);
+			glColor3f (0.75, 0.75, 0.75);
+			glBegin (GL_POLYGON);
+			for (j = 0; j < mapPoly.polyNVx[i]; j++, p+=3)
+				glVertex3fv (mapPoly.vertexes + p);
+			glEnd();
+		}
+		else {
+			if (!ext) {
+				if (m & MAP_PLACE_FALSEFLAG)
+					name = texName[TEX_FLAGCROSSED];
+				else if (m & MAP_PLACE_FLAG)
+					name = texName[TEX_FLAG];
+				else if (m & MAP_PLACE_MINE)
+					name = texName[TEX_MINE];
+				else
+					name = texName[TEX_NUMBASE + (m & MAP_PLACE_NUMMASK)];
+			}
+
+			glEnable (GL_TEXTURE_2D);
+			glBindTexture(GL_TEXTURE_2D, name);
+
+			glBegin (GL_POLYGON);
+			k = MAX_VERTEX_FACE * 2 * (mapPoly.polyNVx[i] - 3);
+			for (j = 0; j < mapPoly.polyNVx[i]; j++, k+=2, p+=3) {
+				glTexCoord2f (texVertex[k], texVertex[k + 1]);
+				glVertex3fv (mapPoly.vertexes + p);
+			}
+			glEnd();
+		}
+	}
 
 	/* ----------------- 2D mode ------------------ */
 	glDisable (GL_TEXTURE_2D);
@@ -1114,11 +919,11 @@ void	updateDisplay()
 	printString(string);
 
 	// Tempo e record
-	itoa ((time < 99990) ? time / 10 : 9999, string, 10);
+	itoa ((timer < 99990) ? timer / 10 : 9999, string, 10);
 	glRasterPos2i(screenViewport[2] - 10 * (strlen (string)+1), 10);
 	printString(string);
 
-	itoa (vars.hallsOfFame[map.typeIndex].time, string, 10);
+	itoa (recordArray->record, string, 10);
 	glRasterPos2i(screenViewport[2] - 10 * (strlen (string)+1), 23);
 	printString(string);
 
@@ -1136,6 +941,4 @@ void	updateDisplay()
 
     glFlush();
 }
-
-
 
