@@ -1,0 +1,34 @@
+
+IDS_GAME_TEXFILENOTFOUND=File delle texture non trovato
+IDS_GAME_TEXFILEERROR=Errore nella lettura delle texture
+IDS_MODULEMAP_PREPARETEXTURE=Errore nella preparazione delle texture dal modulo esterno
+IDS_GAME_MAPDEFERR=Errore di definizione strutturale della mappa
+IDS_GAME_SELECTION=Errore nella selezione della faccia
+IDS_MODULE_MAPSELECTION=Errore nella scelta del tipo di mappa
+IDS_MAP_TOONEIGHBOURS=Troppe caselle vicine nella mappa
+IDS_MODULE_CANTLOAD=Non posso caricare la libreria %s
+IDS_MODULE_INVALIDLIBRARY=La libreria %s non è una libreria valida
+IDS_MODULE_VERSION=La libreria %s non è di una versione supportata
+IDS_MODULE_INVALIDMAPMOD=La libreria %s contiene un modulo mappa non valido
+IDS_MODULE_TOOMAPS=Troppe mappe nel modulo di libreria %s
+IDS_MODULE_INVALIDGAMEMOD=La libreria %s contiene un modulo di gioco non valido
+IDS_OPENGL_CHOOSEPIXELFORMAT=Errore ChoosePixelFormat():\r\nNon posso trovare una modalità video adatta
+IDS_OPENGL_SETPIXELFORMAT=Errore SetPixelFormat():\r\nNon posso selezionare la modalità video scelta
+IDS_MAIN_PERFTIMER=Performance Timer non supportato dalla macchina
+IDS_MAIN_STORESETTINGS=Non posso salvare i settaggi
+IDS_MAIN_STANDARDLIBRARY=Non trovo la libreria standard di mappe! ("plugins\\standard.dll")
+IDS_MAIN_MENUITEMS=Errore generico di menu
+IDS_VARS_MAPENUM=Errore generico di enumerazione mappa in salvataggio settaggi
+IDS_VARS_DEFAULTSETTING=Caricati i settaggi standard
+
+IDM_GAME=&Gioco
+IDM_RESTART_GAME=&Ricomincia
+IDM_NEW_GAME=&Nuovo gioco...
+IDM_EXIT=&Esci
+IDM_VIEW=&Visualizza
+IDM_HALLSOFFAME=&Record...
+IDM_LINEARFILTERING=&Filtraggio lineare
+IDM_HELP=&Aiuto
+IDM_ABOUT=&Informazioni...
+
+

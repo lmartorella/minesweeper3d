@@ -82,7 +82,7 @@ DWORD	postBuildMap ()
 
 	for (i=0; i<map.nPlaces; i++) {
 		if ((k = enumerateNeighbours (i, map.neighbour[i].n, MAX_NEIGHBOURS)) > MAX_NEIGHBOURS)
-			return IDS_MAP_TOONEIGHBOURS;
+			return MIDS_MAP_TOONEIGHBOURS;
 		for (j = k; j < MAX_NEIGHBOURS; j++)
 			map.neighbour[i].n[j] = -1;
 	}

@@ -8,17 +8,20 @@
 
 
 /* OPENGL */
-#define Z_VIEW -3.6f
-#define Z_MIN  0.1f
-#define Z_MAX  10.0f
-#define FOV    32.0f		
+#define Z_VIEW			-3.6f
+#define Z_MIN			0.1f
+#define Z_MAX			10.0f
+#define FOV_ICOSAH		32.0f
+#define	FOV_PLANE		105.0		
 
 #define X_SENS 2.25e-03f
 #define Y_SENS 2.25e-03f
 
 
-GLfloat	rot[16];
 
+
+GLfloat	rot[16];
+GLfloat xPos, yPos;				// per plane
 
 
 void	GetMineInfo (int * versione, struct MINE_MODULE_INFO * m)
@@ -31,13 +34,16 @@ void	GetMineInfo (int * versione, struct MINE_MODULE_INFO * m)
 
 void	GetMapCount (int * count)
 {
-	*count = 3;			
+	*count = 4;			
 }
 
 
-static char  names[3][32] = {   "2-Icosahedron (80)", 
+static char  names[4][32] = {   "Original Winmine",
+								"2-Icosahedron (80)", 
 							    "3-Icosahedron (320)", 
 								"4-Icosahedron (1280)" };
+
+
 
 
 void	GetMapName (int number, char * name)
@@ -327,7 +333,13 @@ void subdivide(int index, int *lastVertex, int *lastTriangle, int *lastSide)
 
 
 
-static int mines [3] = { 8, 32, 128 };
+
+
+
+static int mines [4] = { 99, 8, 32, 128 };
+
+
+
 
 
 
@@ -335,7 +347,7 @@ void	BuildMap (int number, struct MINESWEEPER_MAP * map)
 {
 	int i, j;
 
-	number++;
+	if (number >= 1 && number <= 3) {
 		initialize();
 
 		for (j=0; j<number; j++) {
@@ -356,10 +368,10 @@ void	BuildMap (int number, struct MINESWEEPER_MAP * map)
 			aggiornaMatrix();
 		}
 	
-		map->nPlaces = propAct[1];
 		map->nVertexes = propAct[0];
-		map->vertex = (struct MINESWEEPER_VERTEX*) malloc (sizeof (struct MINESWEEPER_VERTEX) * propAct[0]);
-		map->face = (struct MINESWEEPER_FACE*) malloc (sizeof (struct MINESWEEPER_FACE) * propAct[1]);
+		map->nPlaces = propAct[1];
+		map->vertex = new MINESWEEPER_VERTEX [propAct[0]];
+		map->face = new MINESWEEPER_FACE [propAct[1]];
 
 		for (i = 0; i < propAct[0]; i++) {
 			map->vertex[i].x = vdataAct[i * 3 + 0];
@@ -375,8 +387,43 @@ void	BuildMap (int number, struct MINESWEEPER_MAP * map)
 				map->face[i].v[j] = -1;
 		}
 		deleteArrayAct();
+	}
 
-	map->initialMines = mines[number-1]; 
+	else if (number == 0) {				// Original Minesweeper
+		
+		int w = 30, h = 16;
+		
+		map->nPlaces = w * h;
+		map->nVertexes = (w + 1) * (h + 1);
+		map->vertex = new MINESWEEPER_VERTEX [map->nVertexes];
+		map->face = new MINESWEEPER_FACE [map->nPlaces];
+
+		i = 0;
+		int row, col;
+		for (row = 0; row < h + 1; row++) 
+			for (col = 0; col < w + 1; col++, i++) {
+				map->vertex[i].z = 0.0;
+				map->vertex[i].x = float(col);
+				map->vertex[i].y = float(row);
+			}
+
+		i = 0;
+		for (row = 0; row < h; row++) 
+			for (col = 0; col < w; col++, i++) {
+				map->face[i].v[0] = row * (w + 1) + col;
+				map->face[i].v[3] = row * (w + 1) + col + 1;
+				map->face[i].v[2] = (row + 1) * (w + 1) + col + 1;
+				map->face[i].v[1] = (row + 1) * (w + 1) + col;
+				for (j = 4; j < MAX_VERTEX_FACE; j++)
+					map->face[i].v[j] = -1;
+			}
+	}
+	else {
+		map->vertex = NULL;
+		map->place = NULL;
+	}
+
+	map->initialMines = mines[number]; 
 }
 
 
@@ -384,10 +431,8 @@ void	BuildMap (int number, struct MINESWEEPER_MAP * map)
 
 void	DestroyMap (int idx, struct MINESWEEPER_MAP * map)
 {
-	if (idx != 0) {
-		free (map->face);
-		free (map->vertex);
-	}
+	delete[] map->face;
+	delete[] map->vertex;
 	map->face = NULL;
 	map->vertex = NULL;
 }
@@ -418,48 +463,86 @@ void	mult (GLfloat * m1, GLfloat * m2, GLfloat * r)
 
 
 
-int		MouseMove(int idx, int dx, int dy)
+int		MouseMove(int mapIdx, int dx, int dy)
 {
-	GLfloat x, y, cf, sf, ct, st;
-	static GLfloat	rotxy[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}, 
-					r[16]     = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
+	if (mapIdx > 0) {
+		GLfloat x, y, cf, sf, ct, st;
+		static GLfloat	rotxy[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}, 
+						r[16]     = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
 
-	y = dy * X_SENS;
-	x = dx * Y_SENS;
+		y = dy * X_SENS;
+		x = dx * Y_SENS;
 	
-	ct = (float)cos (x), st = (float)sin (x);
-	cf = (float)cos (y), sf = (float)sin (y);
+		ct = (float)cos (x), st = (float)sin (x);
+		cf = (float)cos (y), sf = (float)sin (y);
 
-	rotxy[0] = ct, rotxy[1] = st*sf, rotxy[2] = -st*cf;
-	rotxy[5] = cf, rotxy[6] = sf;
-	rotxy[8] = st, rotxy[9] = -sf*ct, rotxy[10] = ct*cf;
+		rotxy[0] = ct, rotxy[1] = st*sf, rotxy[2] = -st*cf;
+		rotxy[5] = cf, rotxy[6] = sf;
+		rotxy[8] = st, rotxy[9] = -sf*ct, rotxy[10] = ct*cf;
+		
+		mult (rotxy, rot, r);
+		memcpy (rot, r, sizeof (GLfloat) * 16);
+
+		glLoadIdentity();
+		glTranslatef (0.0, 0.0, Z_VIEW);
+
+		glMultMatrixf (rot);
 	
-	mult (rotxy, rot, r);
-	memcpy (rot, r, sizeof (GLfloat) * 16);
+		return 1;
+	}
+	else {
+		// Plane
+		xPos -= dx * X_SENS * 6;
+		yPos += dy * Y_SENS * 6;
+		if (xPos < 0)
+			xPos = 0.0;
+		else if (xPos > 30)
+			xPos = 30;
+		if (yPos < 0)
+			yPos = 0.0;
+		else if (yPos > 16)
+			yPos = 16;
 
+		glLoadIdentity();
+		glTranslatef (-xPos, -yPos, Z_VIEW);
+		glRotatef (-1.0f, 1.0, 0.0, 0.0);
+		return 1;
+	}
+}
+
+
+
+
+void	SetCameraParams (int map, int width, int height)
+{
+	if (map > 0)
+		gluPerspective(FOV_ICOSAH, (float) width / height, Z_MIN, Z_MAX);
+	else
+		gluPerspective(FOV_PLANE, (float) width / height, Z_MIN, Z_MAX);
+}
+
+
+
+
+void	ResetMap (int map)
+{
+	glMatrixMode (GL_MODELVIEW);
 	glLoadIdentity();
-	glTranslatef (0.0, 0.0, Z_VIEW);
 
-	glMultMatrixf (rot);
-	if (idx == 0)
-		glTranslatef (-0.5, -0.5, -0.5);
+	if (map > 0) {
+		memset (rot, 0, 16 * sizeof (GLfloat));
+		rot[0] = rot[5] = rot[10] = rot[15] = 1.0;
+		GLfloat position[] = {0.5f,0.2f,1.5f,0};
+		glLightfv (GL_LIGHT0, GL_POSITION, position);
+	}
+	else {
+		xPos = 30.0 / 2.0;
+		yPos = 16.0 / 2.0; 
+		GLfloat position[] = {1.0f, 1.0f, 1.5f, 0};
+		glLightfv (GL_LIGHT0, GL_POSITION, position);
+	}
 
-	return 1;
-}
-
-
-
-
-void	SetCameraParams (int dummy, int width, int height)
-{
-	gluPerspective(FOV, (float) width / height, Z_MIN, Z_MAX);
-}
-
-
-void	ResetMap (int i)
-{
-	memset (rot, 0, 16 * sizeof (GLfloat));
-	rot[0] = rot[5] = rot[10] = rot[15] = 1.0;
+	glEnable (GL_LIGHT0);
 }
 
 

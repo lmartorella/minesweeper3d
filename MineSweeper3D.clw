@@ -12,15 +12,14 @@ Class1=CMineSweeper3DApp
 Class2=CMineSweeper3DDlg
 Class3=CAboutDlg
 
-ResourceCount=6
-Resource1=IDD_MINESWEEPER3D_DIALOG
+ResourceCount=5
+Resource1=IDD_ABOUTBOX
 Resource2=IDR_MAINFRAME
-Resource3=IDD_ABOUTBOX
-Resource4=IDD_RECORD
+Resource3=IDD_HALLSOFFAME
+Resource4=IDD_MINESWEEPER3D_DIALOG
 Class4=CHallsOfFameDlg
-Resource5=IDD_HALLSOFFAME
 Class5=CWonDlg
-Resource6=IDR_MENU1
+Resource5=IDD_RECORD
 
 [CLS:CMineSweeper3DApp]
 Type=0
@@ -59,16 +58,6 @@ Control4=IDC_STATIC,static,1342177283
 Type=1
 Class=CMineSweeper3DDlg
 ControlCount=0
-
-[MNU:IDR_MENU1]
-Type=1
-Class=?
-Command1=ID_FILE_RESTARTGAME
-Command2=IDM_FILE_EXIT
-Command3=IDM_HALLSOFFAME
-Command4=IDM_FILTERING
-Command5=IDM_ABOUTBOX
-CommandCount=5
 
 [CLS:CHallsOfFameDlg]
 Type=0

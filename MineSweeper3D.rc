@@ -70,10 +70,10 @@ CAPTION "About..."
 FONT 8, "MS Sans Serif"
 BEGIN
     LTEXT           "",IDC_VERSION,40,10,131,8,SS_NOPREFIX
-    LTEXT           "Copyright (C) LuxSoftware - Noinet - Pisa - 2001",
+    LTEXT           "Copyright (C) LuxSoftware - Noinet - Pisa - 2001-02",
                     IDC_STATIC,40,29,176,8
     DEFPUSHBUTTON   "OK",IDOK,178,7,50,14,WS_GROUP
-    ICON            IDI_ICON1,IDC_STATIC,15,15,16,16
+    ICON            IDI_ICON1,IDC_STATIC,15,15,20,20
 END
 
 IDD_MINESWEEPER3D_DIALOG DIALOGEX 0, 0, 262, 160
@@ -81,7 +81,6 @@ STYLE WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_VISIBLE | WS_CAPTION | WS_SYSMENU |
     WS_THICKFRAME
 EXSTYLE WS_EX_APPWINDOW
 CAPTION "Mine Sweeper 3D"
-MENU IDR_MENU1
 FONT 8, "MS Sans Serif", 0, 0, 0x1
 BEGIN
 END
@@ -198,36 +197,6 @@ BEGIN
     END
 END
 #endif    // APSTUDIO_INVOKED
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Menu
-//
-
-IDR_MENU1 MENU DISCARDABLE 
-BEGIN
-    POPUP "&File"
-    BEGIN
-        MENUITEM "&Restart Game\tF2",           ID_FILE_RESTARTGAME, GRAYED
-        POPUP "&New Game"
-        BEGIN
-            MENUITEM SEPARATOR
-        END
-        MENUITEM SEPARATOR
-        MENUITEM "&Exit",                       IDM_FILE_EXIT
-    END
-    POPUP "&View"
-    BEGIN
-        MENUITEM "&Halls of Fame",              IDM_HALLSOFFAME
-        MENUITEM SEPARATOR
-        MENUITEM "&Linear filtering",           IDM_FILTERING, CHECKED
-    END
-    POPUP "&Help"
-    BEGIN
-        MENUITEM "&About...",                   IDM_ABOUTBOX
-    END
-END
 
 
 /////////////////////////////////////////////////////////////////////////////

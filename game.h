@@ -14,11 +14,11 @@
 #define	MAP_PLACE_NUMMASK   0x00ff
 
 
-#define		GAME_STATUS_NORMAL				0
-#define		GAME_STATUS_ENDED_LOST			1
-#define		GAME_STATUS_ENDED_WIN			2
-#define		GAME_STATUS_STOPPED				3
-#define		GAME_STATUS_ENDED_WINRECORD 	4
+#define		GAME_NORMAL					0x00000000
+#define		GAME_ENDED					0x00000001
+#define		GAME_WIN					0x00000010
+#define		GAME_RECORD					0x00000100
+#define		GAME_STOP					0x00001000
 
 
 #define		MINE_LBUTTON			1
@@ -45,10 +45,11 @@
 
 	void	hideCrosshair();
 	void	showCrosshair();
-	UINT *	getTimer();
+
+	int		timerProc();
 
 	DWORD	renderer();
 	int		processMouseButton (UINT, int, int, int * unlock, int * status);
-
+	int		mouseMove (int dx, int dy);
 
 #endif

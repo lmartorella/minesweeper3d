@@ -199,6 +199,18 @@ SOURCE=.\MineSweeper3D.rc
 SOURCE=.\MineSweeper3D.rc2
 # End Source File
 # End Group
+# Begin Group "Data"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\data\english.txt
+# End Source File
+# Begin Source File
+
+SOURCE=.\data\italian.txt
+# End Source File
+# End Group
 # Begin Source File
 
 SOURCE=.\alfatesting.txt

@@ -1,16 +1,24 @@
-MineSweeper 3D  V.0.60
-	        11/03/2002
+MineSweeper 3D  V.0.61
+	        14/03/2002
 Free Distribution
 
 
 Please report bug/suggestion at s190639@studenti.ing.unipi.it
 
 
-Version 0.60
-* Best graphics, buttons!
-* Only simplified module map.
 
-New in 0.52 		
+Version 0.61 [14/03/02]:
+* Button animation
+* Cfg file
+* Internationalization
+* Recoding menus
+
+Version 0.60 [10/03/02]:
+* Best graphics, buttons, lighting!
+* Only simplified module map [plugin].
+* Pulizia del codice.
+
+New in 0.52 	[24/02/02]:
 * Modules graphics
 * Fixed minor bugs (crosshair...)
 * Accelerator key F2
@@ -23,7 +31,7 @@ New in 0.51 		[18/02/02]:
 New in 0.5 		[03/11/01 - 16/02/02]:
 * Introduzione dei plugin!
 * Toroide!
-* Pulizia del codice
+* Pulizia del codice, riconversione [C -> C++]
 * Migliore gestione del cronometro [timer bug]
 * Controllo su INVIO e ESC
 

@@ -32,8 +32,10 @@ static	int	find (const char * const name)
 {
 	int i;
 	for (i = 0; i < vars.nMapModules; i++)
-		if (strcmp (name, vars.records[i].moduleName) == 0)
+		if (strcmp (name, vars.records[i].moduleName) == 0) {
+			vars.records[i].visible = 1;
 			return 1;
+		}
 	return 0;
 }
 
@@ -86,6 +88,7 @@ static DWORD UpdateSettings ()
 		if (!find(map->moduleName)) {
 			strcpy (newarray[i].moduleName, map->moduleName);
 			newarray[i].nMaps = map->nMaps;
+			newarray[i].visible = 1;
 			newarray[i].records = new RECORD [map->nMaps];
 			for (j = 0; j < map->nMaps; j++) {
 				strncpy (newarray[i].records[j].mapName, map->mapDesc[j].name, MINE_MODULE_NAMESIZE);
@@ -102,7 +105,7 @@ static DWORD UpdateSettings ()
 	vars.records = newarray;
 	vars.nMapModules = count;
 
-	return (i != count) ? IDS_VARS_MAPENUM : 0;
+	return (i != count) ? MIDS_VARS_MAPENUM : 0;
 }
 
 
@@ -156,6 +159,7 @@ static int OpenSettings()
 	}
 
 	for (i=0; i<vars.nMapModules; i++) {
+		vars.records[i].visible = 0;
 		vars.records[i].records = new RECORD [vars.records[i].nMaps];
 		if (fread (vars.records[i].records, sizeof(struct RECORD), vars.records[i].nMaps, file) != (UINT)vars.records[i].nMaps)
 			break;
@@ -196,7 +200,7 @@ DWORD	LoadSettings()
 		return err;
 
 	if (!def) return 0;
-		else return IDS_VARS_DEFAULTSETTING;
+		else return MIDS_VARS_DEFAULTSETTING;
 }
 
 
@@ -210,22 +214,22 @@ DWORD   StoreSettings ()
 	FILE * file;
 	file = fopen (varsFile, "wb");
 	if (file == NULL)
-		return IDS_MAIN_STORESETTINGS;
+		return MIDS_MAIN_STORESETTINGS;
 	if (fwrite (&ver, sizeof (WORD), 1, file) != 1)
-		return IDS_MAIN_STORESETTINGS;
+		return MIDS_MAIN_STORESETTINGS;
 	if (fwrite (&vars, sizeof (vars), 1, file) != 1)
-		return IDS_MAIN_STORESETTINGS;
+		return MIDS_MAIN_STORESETTINGS;
 
 	// C'è da scrivere la lista delle mappe con i record
 	if (fwrite (vars.records, sizeof (struct MINE_VARS_MAPRECORD), vars.nMapModules, file) != (UINT)vars.nMapModules)
-		return IDS_MAIN_STORESETTINGS;
+		return MIDS_MAIN_STORESETTINGS;
 
 	for (i=0; i<vars.nMapModules; i++) {
 		for (j=0; j<vars.records[i].nMaps; j++)
 			vars.records[i].records[j].crc = calcCRC(vars.records[i].records + j);
 
 		if (fwrite (vars.records[i].records, sizeof(struct RECORD), vars.records[i].nMaps, file) != (UINT)vars.records[i].nMaps)
-			return IDS_MAIN_STORESETTINGS;
+			return MIDS_MAIN_STORESETTINGS;
 		delete vars.records[i].records;
 	}
 	delete vars.records;

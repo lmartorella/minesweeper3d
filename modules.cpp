@@ -61,16 +61,16 @@ DWORD	ReadLibrary (const char * const name, DWORD * code)
 
 	MINE_MODULE	module = OpenFileLib (name);
 	if (module == MINE_MODULE_INVALID) 
-		return IDS_MODULE_CANTLOAD;
+		return MIDS_MODULE_CANTLOAD;
 	
 	// Aperta
 	GetMineInfo = (GETMINEINFO_TYPE) GetFunctionAddress (module, "GetMineInfo");
 	if (GetMineInfo == MINE_MODULE_INVALID) 
-		return IDS_MODULE_INVALIDLIBRARY;
+		return MIDS_MODULE_INVALIDLIBRARY;
 
 	GetMineInfo (&ver, &info);
 	if (ver != 0x100) 
-		return IDS_MODULE_VERSION;
+		return MIDS_MODULE_VERSION;
 
 	// E' una mappa?
 	generic = GetFunctionAddress (module, "BuildMap");
@@ -88,7 +88,7 @@ DWORD	ReadLibrary (const char * const name, DWORD * code)
 			|| MouseMove == MINE_MODULE_INVALID || SetCameraParams == MINE_MODULE_INVALID ||
 			DestroyMap == MINE_MODULE_INVALID || ResetMap == MINE_MODULE_INVALID ) 
 
-			return IDS_MODULE_INVALIDMAPMOD;
+			return MIDS_MODULE_INVALIDMAPMOD;
 
 		// Mappa ok
 		mapDesc = new MINE_MODULE_MAPDESC;
@@ -98,7 +98,7 @@ DWORD	ReadLibrary (const char * const name, DWORD * code)
 		GetMapCount (&mapDesc->nMaps);
 		
 		if (mapDesc->nMaps > MAX_MODULE_MAPS_COUNT) 
-			return IDS_MODULE_TOOMAPS;
+			return MIDS_MODULE_TOOMAPS;
 
 		mapDesc->mapDesc = new MINE_MAPDESC [mapDesc->nMaps];
 		for (i = 0; i < mapDesc->nMaps; i++) {
@@ -166,7 +166,7 @@ DWORD	UpdateMapFunctions (DWORD code)
 		}
 		p = p->next;
 	}
-	return IDS_MODULE_MAPSELECTION;
+	return MIDS_MODULE_MAPSELECTION;
 }
 
 

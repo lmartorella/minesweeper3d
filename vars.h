@@ -6,7 +6,7 @@
 
 #include "modules.h"
 
-#define CFGFILE_VER 0x306
+#define CFGFILE_VER 0x307
 
 
 struct	RECORD {
@@ -21,6 +21,7 @@ struct	RECORD {
 struct	MINE_VARS_MAPRECORD {
 	char	moduleName [MINE_MODULE_NAMESIZE];
 	int		nMaps;
+	int		visible;
 
 	struct RECORD * records;		// tanti quante sono le mappe
 };

@@ -6,20 +6,12 @@
 #define IDD_ABOUTBOX                    100
 #define IDD_MINESWEEPER3D_DIALOG        102
 #define IDR_MAINFRAME                   128
-#define IDR_MENU1                       129
 #define IDD_HALLSOFFAME                 132
 #define IDD_RECORD                      133
 #define IDI_ICON1                       135
 #define IDC_VERSION                     1000
 #define IDC_EDIT1                       1005
 #define IDC_LIST2                       1007
-#define ID_HELP_ABOUT                   32771
-#define ID_FILE_EXIT                    32772
-#define IDM_FILE_EXIT                   32772
-#define ID_FILE_NEWGAME                 32773
-#define IDM_HALLSOFFAME                 32778
-#define IDM_FILTERING                   32779
-#define ID_FILE_RESTARTGAME             32781
 #define ID_NEWMAP_GAME                  0xc000
 
 // Next default values for new objects
@@ -28,7 +20,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        138
 #define _APS_NEXT_COMMAND_VALUE         32786
-#define _APS_NEXT_CONTROL_VALUE         1008
+#define _APS_NEXT_CONTROL_VALUE         1009
 #define _APS_NEXT_SYMED_VALUE           103
 #endif
 #endif

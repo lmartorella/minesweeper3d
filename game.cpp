@@ -31,8 +31,8 @@ extern	MINESWEEPER_MAP	   	map;
 static  int mButtons = 0;
 
 /* GAME */
-static unsigned int timer = 0;
-static int gameStatus = GAME_STATUS_STOPPED;
+		unsigned int timer = 0;
+static int gameStatus = GAME_STOP;
 static int crosshair = 1;				// per crosshair
 
 /* ALTRE VARIABILI, INI e CFG */
@@ -40,6 +40,9 @@ extern  GLOBAL_VARS vars;
 extern  RECORD * recordArray;			// relativo a mappa selezionata
 extern	INI_VARS ini;
 
+/* TIMER HF */
+static int needTimer = 0;
+static GLfloat HEIGHT_STEP = 0.15f;
 
 
 /* FUNCTIONS DLL, MODULE MAP */
@@ -49,6 +52,9 @@ DESTROYMAP_TYPE			p_DestroyMap	= NULL;
 MOUSEMOVE_TYPE			p_MouseMove		= NULL;
 SETCAMERAPARAMS_TYPE	p_SetCameraParams = NULL;
 RESETMAP_TYPE			p_ResetMap		= NULL;
+
+
+
 
 
 
@@ -85,13 +91,13 @@ static DWORD	buildTextures()
 	BYTE * buffer = new BYTE [width * height * 3];
 	file = fopen (ini.texFileName, "rb");
 	if (file == NULL) 
-		return IDS_GAME_TEXFILENOTFOUND;
+		return MIDS_GAME_TEXFILENOTFOUND;
 
+	// lettura RGB -> RGBA
 	if (fread (buffer, width * height * 3, 1, file) != 1) 
-		return IDS_GAME_TEXFILEERROR;
+		return MIDS_GAME_TEXFILEERROR;
 
 	fclose (file);
-
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, width);
@@ -114,14 +120,14 @@ static DWORD	buildTextures()
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
 				           GL_NEAREST);
 		}
-		glTexImage2D (GL_TEXTURE_2D,
-			          0,
-					  GL_RGB,
-					  ini.singleTexWidth,
-					  ini.singleTexHeight,
-					  0,
-					  GL_RGB,
-					  GL_UNSIGNED_BYTE,
+		glTexImage2D (GL_TEXTURE_2D,				// texture
+			          0,							// mipmap
+					  GL_RGB4,						// 4 componenti
+					  ini.singleTexWidth,			// w
+					  ini.singleTexHeight,			// h
+					  0,							// no border
+					  GL_RGB,						// 4 compo
+					  GL_UNSIGNED_BYTE,				// 
 		  			  buffer + i * 3 * (ini.singleTexWidth + ini.interleaveX));
 	}
 	delete buffer;
@@ -374,11 +380,16 @@ public:
 		// Array [0..nPoly-1] contenente le normali ai tasselli alta quanto un bottone
 		Point3D	*  faceNormal;
 
-		// Altezza di ogni "tasto" [-1..0]
-		GLfloat	*	hKey;
+		// Altezza di ogni "tasto" [1 attivo, 0 no]
+		int		*	activeKey;
+		GLfloat *	heightKey;
 
 	MapPoly (MINESWEEPER_MAP * map, DWORD * error);
 	~MapPoly ();
+
+	void		Reset()
+	{ for (int i=0; i<n; i++) activeKey[i] = 0, heightKey[i] = 0.0; }
+	int			ActiveKeys();
 };
 
 MapPoly * mapPoly = NULL;
@@ -403,8 +414,9 @@ MapPoly::MapPoly (MINESWEEPER_MAP * map, DWORD * err)
 		origVert = new Point3D * [n];
 		bordNormal = new Point3D * [n];
 		faceNormal = new Point3D [n];
-		hKey = new float [n];
-		memset (hKey, 0, sizeof (GLfloat) * n);
+		heightKey = new GLfloat [n];
+		activeKey = new int [n];
+		Reset();
 	}
    
 	for (int i = 0; i < n; i++) {
@@ -413,7 +425,7 @@ MapPoly::MapPoly (MINESWEEPER_MAP * map, DWORD * err)
 				break;
 		
 		if (j >= MAX_VERTEX_FACE || j <= 2) {
-			*err = IDS_GAME_MAPDEFERR;
+			*err = MIDS_GAME_MAPDEFERR;
 			return;
 		}
 		
@@ -468,7 +480,9 @@ MapPoly::~MapPoly()
 
 	delete[] edges;
 	delete[] faceNormal;
-	delete[] hKey;
+
+	delete[] activeKey;
+	delete[] heightKey;
 
 	for (i=0; i<n; i++)
 		delete[] bordNormal[i];
@@ -495,9 +509,10 @@ static void	prepareMap ()
 
 	map.nMines = map.initialMines;
 
-	// Mette mine
-	for (i = 0; i < map.nPlaces; i++)
+	// Mette mine	
+	for (i = 0; i < map.nPlaces; i++) {
 		map.place[i] = MAP_PLACE_COVERED;
+	}
 
 	for (i = 0; i < map.initialMines; i++) {
 		do {
@@ -508,6 +523,7 @@ static void	prepareMap ()
 
 	// Ora setta i numeri
 	placeNumbers();
+
 }		
 
 
@@ -560,7 +576,7 @@ DWORD selectFace (int * face)
 		glLoadName (i);
 		glBegin (GL_POLYGON);
 		for (j = 0; j < mapPoly->edges[i]; j++) 
-			glVertex3fv (mapPoly->modVert[i][j].v);
+			glVertex3fv (mapPoly->origVert[i][j].v);
 		glEnd();
 	}
 
@@ -578,7 +594,7 @@ DWORD selectFace (int * face)
 	c = 0;
 	for (i = 0; i < hits; i++) {
 		if (selectBuf[p] != 1) 
-			return IDS_GAME_SELECTION;
+			return MIDS_GAME_SELECTION;
 		if (selectBuf[p+1] < z)
 			z = selectBuf[p+1], hit = (int)selectBuf[p+3], c = 0;
 		else if (selectBuf[p+1] == z)
@@ -661,6 +677,35 @@ DWORD selectFace (int * face)
 
 
 
+int		mouseMove (int dx, int dy)
+{
+	if (gameStatus & GAME_STOP)
+		return 0;
+
+	int refresh = p_MouseMove (mapIndex, dx, dy);
+
+	if (gameStatus & GAME_ENDED)
+		return refresh;
+
+	// Ora controlla se si sposta il puntatore da qualche parte col tasto premuto
+	if (mButtons & MINE_LBUTTON) {
+		int hit;
+		selectFace (&hit);
+		if (hit != -1) {
+			mapPoly->heightKey[hit] = -1.0f;
+
+			memset (mapPoly->activeKey, 0, sizeof(int) * mapPoly->n);
+			mapPoly->activeKey[hit] = 1;
+			needTimer = 1;
+			return 1;
+		}
+	}
+	return refresh;
+}
+
+
+
+
 
 
 
@@ -689,6 +734,12 @@ DWORD selectFace (int * face)
 // ------------------------------------------------------- GAME
 // ------------------------------------------------------- GAME
 
+
+inline void Discover (int idx)
+{
+	map.place[idx] &= ~MAP_PLACE_COVERED;
+	mapPoly->heightKey[idx] = -1.0f;
+}
 
 
 
@@ -699,11 +750,12 @@ static void	totalSweeper(int uncover, MINESWEEPER_MAP * map)
 		if (map->place[i] & MAP_PLACE_FLAG && !(map->place[i] & MAP_PLACE_MINE))
 			map->place[i] |= MAP_PLACE_FALSEFLAG;
 		if (map->place[i] & MAP_PLACE_MINE && !(map->place[i] & MAP_PLACE_FLAG))
-			if (uncover)
-				map->place[i] &= ~(MAP_PLACE_COVERED);
+			if (uncover) 
+				Discover (i);
 			else
 				map->place[i] |= MAP_PLACE_FLAG;
 	}
+	needTimer = 1;
 }
 
 
@@ -714,7 +766,7 @@ static int		secureSweeper (int idx, MINESWEEPER_MAP * map)
 	int i = -1, neigh;
 	int end = 0;
 
-	map->place[idx] &= (~MAP_PLACE_COVERED);
+	Discover (idx);
 	map->nChecked++;
 
 	if ((map->place[idx] & MAP_PLACE_NUMMASK) != 0)
@@ -731,6 +783,10 @@ static int		secureSweeper (int idx, MINESWEEPER_MAP * map)
 
 
 
+
+
+
+
 static int		MouseButton		   (int msg, 
 									int * buttons, 
 									int * gameStatus,
@@ -738,30 +794,34 @@ static int		MouseButton		   (int msg,
 {
 	int hit, k, n, err, flag, a, ended;
 
-	ended = *gameStatus == GAME_STATUS_ENDED_LOST || *gameStatus == GAME_STATUS_ENDED_WIN;
+	ended = (*gameStatus == GAME_ENDED);
 
 	switch (msg) {
 	case WM_LBUTTONDOWN:
-		*buttons |= MINE_LBUTTON;
 
 		if (ended)
 			return 0;
+
+		*buttons |= MINE_LBUTTON;
 		selectFace (&hit);
 		if (hit == -1)
 			return 0;
 
-		mapPoly->hKey[hit] = -1.0f;
+		mapPoly->heightKey[hit] = -1.0f;
+		mapPoly->activeKey[hit] = 1;
+
+		needTimer = 1;
 		return 1;
 
 	case WM_RBUTTONDOWN:
-		*buttons |= MINE_RBUTTON;
 		if (ended)
 			return 0;
 
+		*buttons |= MINE_RBUTTON;
 		selectFace (&hit);
-
 		if (hit == -1)
 			return 0;
+
 		if (!(map->place[hit] & MAP_PLACE_COVERED))
 			return 0;
 
@@ -773,82 +833,105 @@ static int		MouseButton		   (int msg,
 		return 1;
 
 	case WM_LBUTTONUP:
-	case WM_RBUTTONUP:
-		
 		if (ended) {
 			*buttons |= MINE_UNLOCK;
 			return 0;
 		}
 
-		selectFace (&hit);
+		*buttons &= ~MINE_LBUTTON;
 
+		selectFace (&hit);
 		if (hit == -1)
 			return 0;
 
-		if (msg == WM_LBUTTONUP && *buttons == MINE_LBUTTON) {
-			mapPoly->hKey[hit] = 0;
-			*buttons = 0;
+		if ((*buttons & MINE_RBUTTON) == 0) {
+			mapPoly->activeKey[hit] = 0;
+			needTimer = 1;
 			if ((!(map->place[hit] & MAP_PLACE_COVERED)) ||
 				map->place[hit] & MAP_PLACE_FLAG) 
 				return 1;
 
 			if (map->place[hit] & MAP_PLACE_MINE) {
 				totalSweeper(1, map);
-				*gameStatus = GAME_STATUS_ENDED_LOST;
+				*gameStatus |= GAME_ENDED;
+				*gameStatus &= ~GAME_WIN;
 				return 1;		
 			}
 			if (secureSweeper (hit, map)) {
-				*gameStatus = GAME_STATUS_ENDED_WIN;
+				*gameStatus |= GAME_ENDED | GAME_WIN;
 				map->nMines = 0;
 				totalSweeper(0, map);
 			}
 			return 1;
 		}
-		else if (msg == WM_RBUTTONUP && !(*buttons & MINE_LBUTTON)) {
-			*buttons &= ~MINE_RBUTTON;
+		else if (*buttons == (MINE_LBUTTON | MINE_RBUTTON))
+			goto qui;
+		break;
+	
+	case WM_RBUTTONUP:
+		if (ended) {
+			*buttons |= MINE_UNLOCK;
 			return 0;
 		}
-		else if (*buttons == (MINE_LBUTTON | MINE_RBUTTON)) {
-			// Proc. doppio tasto
-			*buttons = 0;
-			n = map->place[hit] & MAP_PLACE_NUMMASK;
-			if (map->place[hit] & MAP_PLACE_COVERED || n == 0)
-				return 0;
-			
-			err = flag = 0;
-			for (k = 0; k < MAX_NEIGHBOURS && map->neighbour[hit].n[k] != -1; k++) {
-				a = map->place[map->neighbour[hit].n[k]] & (MAP_PLACE_MINE | MAP_PLACE_FLAG);
-				if (a != 0 && a != (MAP_PLACE_MINE | MAP_PLACE_FLAG))
-					err++;
-				if (a & MAP_PLACE_FLAG)
-					flag++;
-			}
-			if (err == 0) {
-				k = -1;
-				while (k++, ((n = map->neighbour[hit].n[k]) != -1) && k < MAX_NEIGHBOURS)
-					if (map->place[n] & MAP_PLACE_COVERED && !(map->place[n] & MAP_PLACE_FLAG)) 
-						if (secureSweeper (n, map))
-							ended = 1;
 
-				if (ended) {
-					*gameStatus = GAME_STATUS_ENDED_WIN;
-					map->nMines = 0;
-					totalSweeper(0, map);
-				}
-				return 1;
-			}
-			else if (flag != n)
-				return 0;
-			// Esplode
-			totalSweeper(1, map);
-			*gameStatus = GAME_STATUS_ENDED_LOST;
-			return 1;
-		}
+		*buttons &= ~MINE_RBUTTON;
+		selectFace (&hit);
+		if (hit == -1)
+			return 0;
+
+		if (msg == WM_RBUTTONUP && (*buttons & MINE_LBUTTON) == 0) 
+			return 0;
+		else if (*buttons == (MINE_LBUTTON | MINE_RBUTTON))
+			goto qui;
+		break;
 
 	default:
 		return 0;
 	}
+
+		
+qui:
+	// Proc. doppio tasto
+	mapPoly->activeKey[hit] = 0;
+	needTimer = 1;
+	*buttons = 0;
+	n = map->place[hit] & MAP_PLACE_NUMMASK;
+	if (map->place[hit] & MAP_PLACE_COVERED || n == 0)
+		return 1;
+			
+	err = flag = 0;
+	for (k = 0; k < MAX_NEIGHBOURS && map->neighbour[hit].n[k] != -1; k++) {
+		a = map->place[map->neighbour[hit].n[k]] & (MAP_PLACE_MINE | MAP_PLACE_FLAG);
+		if (a != 0 && a != (MAP_PLACE_MINE | MAP_PLACE_FLAG))
+			err++;
+		if (a & MAP_PLACE_FLAG)
+			flag++;
+	}
+	if (err == 0) {
+		k = -1;
+		while (k++, ((n = map->neighbour[hit].n[k]) != -1) && k < MAX_NEIGHBOURS)
+			if (map->place[n] & MAP_PLACE_COVERED && !(map->place[n] & MAP_PLACE_FLAG)) 
+				if (secureSweeper (n, map))
+					ended = 1;
+		if (ended) {
+			*gameStatus |= GAME_ENDED | GAME_WIN;
+			map->nMines = 0;
+			totalSweeper(0, map);
+		}
+		return 1;
+	}
+	else if (flag != n)
+		return 1;
+	
+	// Esplode
+	totalSweeper(1, map);
+	*gameStatus |= GAME_ENDED;
+	*gameStatus &= ~GAME_WIN;
+	return 1;
 }
+
+
+
 
 
 
@@ -859,20 +942,17 @@ int		processMouseButton (UINT msg, int x, int y, int * unlock, int * status)
 {
 	int redraw;
 	*status = gameStatus;
-
-	if (gameStatus == GAME_STATUS_STOPPED) {
-		*unlock = 1;
-		return 0;
-	}
-
 	mButtons &= ~MINE_UNLOCK;
 	redraw = MouseButton (msg, &mButtons, &gameStatus, &map);
 	*unlock = (mButtons & MINE_UNLOCK) ? 1 : 0;
 
-	if (gameStatus == GAME_STATUS_ENDED_WIN) 
-		if (timer / 100 < recordArray->record)
-			gameStatus = GAME_STATUS_ENDED_WINRECORD;
+	if (gameStatus & GAME_WIN) 
+		if (timer / 100 < recordArray->record) {
+			recordArray->record = timer / 100;
+			gameStatus |= GAME_RECORD;
+		}
 
+	*status = gameStatus;
 	return redraw;
 }
 
@@ -971,9 +1051,10 @@ DWORD	mine_init()
 	if (texVertex != NULL)
 		delete texVertex;
 	texVertex = new GLfloat [MAX_VERTEX_FACE * 2 * (MAX_VERTEX_FACE - 2)];
+	
 	for (i = 3; i < MAX_VERTEX_FACE; i++) {
 		incAngle = 3.141592 * 2 / i;
-		angle = 3.141592 * 3 / 2 - incAngle;
+		angle = incAngle / 2.0 - (3.141592 * 1.5);
 		for (j = 0; j < i; j++, angle += incAngle) {
 			u = GLfloat (cos (angle) / 2 + 0.5);
 			v = GLfloat (sin (angle) / 2 + 0.5);
@@ -982,39 +1063,116 @@ DWORD	mine_init()
 		}
 	}
 
-	gameStatus = GAME_STATUS_STOPPED;
+	gameStatus = GAME_STOP;
 	crosshair = 0;
+	needTimer = 0;
 	return 0;
 }
 
 
 
-unsigned int *	getTimer ()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+int		timerProc ()
 {
-	return & timer;
+	if (needTimer) 
+		return mapPoly->ActiveKeys();
+	return 0;
 }
+
+
+
+
+int		MapPoly::ActiveKeys()
+{
+	int modified = 0;
+
+	for (int i=0; i<n; i++) {
+		if (!activeKey[i]) {
+			GLfloat h = heightKey[i];
+			if (h < 0) {
+				h += HEIGHT_STEP;
+				modified = 1;
+			}
+			if (h >= 0) {
+				heightKey[i] = 0.0;
+				activeKey[i] = 0;
+			}
+			else
+				heightKey[i] = h;
+		}
+	}
+
+	if (!modified)
+		needTimer = 0;
+	return modified;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 void	resetGame()
 {
 	crosshair = 1;
-	gameStatus = GAME_STATUS_NORMAL;
+	gameStatus = GAME_NORMAL;
 	timer = 0;
+	needTimer = 0;
+	p_ResetMap (mapIndex);
 }
 
 
 
 void	gameClose()
 {
-	gameStatus = GAME_STATUS_STOPPED;
+	gameStatus = GAME_STOP;
 }
 
 
 void	mine_exit ()
 {
 	freeTextures();
-	delete texVertex;
+	if (texVertex)
+		delete texVertex;
+	texVertex = NULL;
+
+	if (mapPoly)
+		delete mapPoly;
+	mapPoly = NULL;
 }
 
 
@@ -1069,14 +1227,14 @@ DWORD	newGame(DWORD code)
 
 	changed = map.code != code;
 	gameClose();
+	needTimer = 0;
+
+	err = UpdateMapFunctions (code); 
+	if (err)
+		return err;
 
 	if (changed) {
 		postDestroyMap ();
-	
-		err = UpdateMapFunctions (code); 
-		
-		if (err)
-			return err;
 		
 		p_BuildMap (mapIndex, &map);
 		err = postBuildMap (); 
@@ -1090,16 +1248,6 @@ DWORD	newGame(DWORD code)
 	prepareMap ();						// mette le mine
 	
 	if (changed) {
-
-		glMatrixMode (GL_MODELVIEW);
-		glLoadIdentity();
-
-		GLfloat position[] = {0.5f,0.2f,1.5f,0};
-		glLightfv (GL_LIGHT0, GL_POSITION, position);
-
-		glShadeModel (GL_FLAT);
-		glMaterialf (GL_FRONT, GL_SHININESS, 30.0);
-
 		DWORD err;
 		if (mapPoly)
 			delete mapPoly;
@@ -1108,6 +1256,8 @@ DWORD	newGame(DWORD code)
 		p_DestroyMap (mapIndex, &map);
 		return err;
 	}
+	else
+		mapPoly->Reset();
 
 	return 0;
 }
@@ -1142,29 +1292,32 @@ int		GetTextPlace (int place, GLuint * name, GLfloat * diffuse)
 
 DWORD	renderer ()
 {
-
-	if (gameStatus == GAME_STATUS_ENDED_LOST)
-	    glClearColor (0.6f, 0, 0, 0);
-	else if (gameStatus == GAME_STATUS_ENDED_WIN)
-		glClearColor (0.0f, 0.4f, 0.0f, 0);
-	else 
+	if (gameStatus & GAME_ENDED) {
+		if (gameStatus & GAME_WIN) 
+			glClearColor (0.0f, 0.4f, 0.0f, 0);
+	    else
+			glClearColor (0.6f, 0, 0, 0);
+	}
+	else
 		glClearColor (0.1f, 0.2f, 0.3f, 0);
 		
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (gameStatus == GAME_STATUS_STOPPED) {
+	if (gameStatus & GAME_STOP) {
 	    glFlush();
 		return 0;
 	}
 
 	/* ----------------- 3D mode ------------------ */
 	glTexEnvf (GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glEnable (GL_LIGHT0);
 	glEnable (GL_LIGHTING);
 
+	glShadeModel (GL_FLAT);
+	glMaterialf (GL_FRONT, GL_SHININESS, 30.0);
+
 	// ****************************** MODEL
-	GLfloat face_specular[] = {179.0/2560, 227.0/2560, 0.1f, 1};
-	GLfloat border_specular[] = {179.0/256, 227.0/256, 1.0f, 1};
+	GLfloat face_specular[] = {179.0f/2560, 227.0f/2560, 0.1f, 1};
+	GLfloat border_specular[] = {179.0f/256, 227.0f/256, 1.0f, 1};
 
 	GLfloat face_diffuse[4];
 	GLfloat border_diffuse[] = {0.4f, 0.4f, 0.4f, 0.4f};
@@ -1187,7 +1340,7 @@ DWORD	renderer ()
 		// Tasto
 		for (int j=0; j<n; j++)
 			vtemp [j] = mapPoly->modVert[i][j] + 
-					    (mapPoly->faceNormal[i] * mapPoly->hKey[i]);
+					    (mapPoly->faceNormal[i] * mapPoly->heightKey[i]);
 
 		Point3D tn = mapPoly->faceNormal[i];
 		tn.Normalize (1.0f);

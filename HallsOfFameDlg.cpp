@@ -66,6 +66,8 @@ BOOL CHallsOfFameDlg::OnInitDialog()
 		m_list.InsertItem (&item);
 */
 		for (int j=0; j<vars.records[i].nMaps; j++) {
+			if (!vars.records[i].visible)
+				continue;
 			item.iItem = c++;
 			item.iSubItem = 0;
 			item.pszText = vars.records[i].records[j].mapName;

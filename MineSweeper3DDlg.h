@@ -46,14 +46,12 @@ protected:
 	afx_msg void OnRButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnTimer(UINT nIDEvent);
-	afx_msg void OnFiltering();
 	afx_msg void OnRButtonDblClk(UINT nFlags, CPoint point);
 	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
-	afx_msg void OnFileRestartgame();
-	afx_msg void OnEffe2();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 private:
+	void CtrlForEnd(int status);
 	void Record();
 
 	void SelectDefaultGame();
@@ -68,23 +66,30 @@ private:
 	void LoadPlugins();
 	void OnOK();
 
-	void UpdateMapMenu();
+	void MINEUpdateMapMenu();
+	void MINESetMenus();
+	int  MINECheckMenuItem (DWORD code, int);
+	void MINEEnableMenuItem (DWORD code, int);
+
 	
-	bool poll;
+	int poll;
 	void NewGame(DWORD map);
 	bool cursorSetting;
 
 	DWORD lastPerfCount;
-	bool	firstClick;
 
 	LARGE_INTEGER lastFrameRendered;
 	LARGE_INTEGER minPeriodRefresh;
 
 	void StartGaming();
 	void PauseGaming();
+	
+	bool firstClick;
+	bool mapReady;
 	bool gaming;
+	bool ended;
+
 	void ButtonUp (DWORD button, UINT nFlags, CPoint point);
-	UINT mouseButtonState;
 	int my;
 	int mx;
 	void ButtonDown (DWORD button, UINT nFlags, CPoint point);
@@ -92,7 +97,6 @@ private:
 	int		winner;
 	DWORD	mapCodeProgressive;
 
-	bool	mapReady;
 };
 
 //{{AFX_INSERT_LOCATION}}
