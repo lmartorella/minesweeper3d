@@ -1,0 +1,133 @@
+################################################
+# Configuration file for MineSweeper 3D 
+# NoinetCorp. (C) 2002 
+#################################################
+
+
+	##########################################
+	# Main settings
+
+
+	# Language-selection. See directory data\ for
+	# files (.lng). All strings defined are mandatory for
+	# successful game loading. Default is "english.lng"
+main_language = italian.lng
+
+
+	# Sensitivity for mouse input
+	# Standard and default values are 1.0
+main_xSens = 3.0
+main_ySens = 3.0 
+
+
+	
+	#########################################
+	# Texture setting
+
+	# Texture namefile selection.
+	# RAW file is a raw RGBRGBRGBRGB... standard pack serialization
+	# (24bpp uncompressed, without header). Size information are
+	# provided by other variables. No default value.
+	# This images contains all 15 textures in a single row:
+	#   MINE
+	#   FLAG
+	#   NUMBERS 1-12
+	#   FLAG_CROSSED
+tex_file = textures.raw
+
+	# Single texture size
+	# Indicate width and height for a single texture, in pixel. 
+	# See OpenGL specification for admitted sizes (2^n). Default is
+	# 32x32 textures
+tex_width =32
+tex_height =32
+
+	# Texture horizontal interleave
+	# Define pixel size of interleave (rows) in image.
+	# Default is zero
+tex_interleave = 1
+
+	
+
+
+
+	#########################################
+	# Perf settings
+	
+	# Internal timer setting
+	# This indicate the refresh of animations
+	# (e.g: buttons rise time).
+	# NOTE: On Win9x, values greater than 18 are clamped
+	# at about 18.2 Hz. Default is 15.
+#perf_internalTimer = 25
+
+	# FPS Limit
+	# For less CPU sucking, limit FPS at this value.
+	# Default is 45. A value of zero indicate no limit.
+#perf_maxFPS = 0
+
+	# Idle-trick refresh
+	# Indicate the number the internal cycles 
+	# (see perf_internalTimer) to be elapse for refreshing 
+	# screen in idle mode (no mouse move), e.g: for 
+	# refreshing the timer.
+	# Default is 5: perf_internalTimer / perf_idleRefresh = 3 Hz.
+#perf_idleRefresh = 1
+
+
+
+
+	#########################################
+	# Graphics setting
+
+	# Filtering for textures.
+	# A non-zero value select Linear Filtering
+	# Zero unselect filer (NEAREST method).
+	# Default is 1
+#graph_filtering = 0
+
+	# Texturing mode for OpenGL engine.
+	# Admitted values is 16-bit, 24-bit (RGB) and 32-bit (RGBA)
+	# Default value is 16 bit.
+	# NOTE: Change this value if you have graphical corruptions.
+graph_bpptexture = 32
+
+	#
+	# --------- LIGHTS
+	#
+	# For this section ref. OpenGL specification.
+	# Try remarker values for comparison!
+
+	# Shininess for button borders and face. (default 30.0, both)
+#light_borderShininess = 100.0
+light_faceShininess = 100.0
+
+	# Button border diffusion and specularity (RGBA)
+	# (default: diffusion[.4, .4, .4, .4]		gray
+	#           specular [.7, .9, 1, 1]			iron blue
+#light_borderDiffuse = 0.5  0.5  0.5  1
+#light_borderSpecular = 0.6  0.8  0.2  1
+
+	# Face diffusion and specularity (RGBA).
+	# Face has two diffusion values for their states of place
+	# (covered and uncovered)
+	# (default: diffCovered	[.3, .3, .3, .3]		dark gray
+	#			diff		[.9, .9, .9, .9]		light gray
+	#           specular	[.07, .09, .1, 1]		light iron blue
+	# [Try this values below for ugly game!!!]
+#light_faceDiffuseCovered =  0.5  0.5  0.5  1
+#light_faceDiffuse = 0.6  0.8  0.2  1
+#light_faceSpecular = 0.6  0.8  0.2  1
+	
+
+
+
+
+
+
+
+
+
+
+	
+ 

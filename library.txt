@@ -1,10 +1,11 @@
 
 
-----------------------------------------------------------------
-Istruzioni per la costruzione di un plugin per MineSweeper v0.5:
-----------------------------------------------------------------
+-----------------------------------------------------------------
+Istruzioni per la costruzione di un plugin per MineSweeper v0.61:
+-----------------------------------------------------------------
 MODULE VERSION 1.0
 
+IMPORTANTE: Nella versione 0.61 alfa2 sono attivi solo i moduli di tipo mappa (vedi cap. 3.A)
 
 ******************************************************************************************
 1) COSTRUZIONE DEL WORKSPACE
@@ -12,24 +13,15 @@ MODULE VERSION 1.0
 
   Creare un workspace con un progetto di tipo "Win32 Dynamic-Link Library".
 
-  Eliminare il file "nomeworkspace.cpp" dal progetto.
-
-  Se si vogliono usare gli header precompilati:
-	Rinominare il file StdAfx.cpp in StdAfx.c (il progetto sarà tutto in C).
-
-	Operare nei settaggi del workspace in modo tale che "StdAfx.c" crei
-	il file PCH (Precompiled Headers) attraverso StdAfx.h e tutti gli altri
-	file ".c" del progetto usino il detto PCH attraverso StdAfx.h.
-
-  Le varie funzioni di MineSweeper dovranno essere scritte in "C" in appositi
-  file .c con la seguente intestazione:
+  Le varie funzioni di MineSweeper dovranno essere scritte in "C++" in appositi
+  file .cpp con la seguente intestazione:
 
 -8<-----------------------------------------------------------------------------
     #define  THIS_IS_A_MODULE
 	#include "library.h"
 -8<-----------------------------------------------------------------------------
 
-	dove "library.h" è fornito con il kit di MineSweeper3D della versione corrente.
+	dove "library.h" è fornito con l'SDK di MineSweeper3D della versione corrente.
 
 
 ******************************************************************************************
@@ -42,10 +34,17 @@ MODULE VERSION 1.0
 			per indicare quali funzioni e che tipo di servizi offre la libreria:
 
 			struct MINE_MODULE_INFO {
-				char	name[32];
+				char	modname[32];
+				char	author[32];
+				char	topic[1024];					
 			};
 
-			+ dove "name" è il nome unico della libreria.
+		dove:
+			+ "modname" è il nome unico della libreria;
+			+ "author" è il nome dello sviluppatore della mappa;
+				(non ancora implementato)
+			+ "topic" è un testo informativo richiamabile dal programma
+				(non ancora implementato).
 
 			In più, la funzione deve ritornare in "version" il valore 0x100 (V1.0).
 
@@ -79,19 +78,15 @@ Da implementare TUTTE le seguenti funzioni:
 			Costruisce la mappa: deve riempire i campi indicati.
 
 			struct	MINESWEEPER_MAP {
-				DWORD	code;
+				[...]
 				int		nPlaces;
 				int		nVertexes;
 				int		initialMines;
 				struct MINESWEEPER_VERTEX	* vertex;
 				struct MINESWEEPER_FACE	* face;
-				struct MINESWEEPER_NEIGHBOUR *	neighbour;
-				int *	place;		
-				int		nMines;
-				int		nChecked;
+				[...]
 			};
 
-			+ code: RISERVATO
 			+ nPlaces: numero di facce della mappa.
 			+ nVertexes: numero di vertici della mappa.
 			+ initialMines: numero di mine in condizioni iniziali. initialMines <= nPlaces
@@ -111,13 +106,8 @@ Da implementare TUTTE le seguenti funzioni:
 				uno per ogni faccia.
 
 				NOTA: L'orientamento dell'enumerazione dei vertici determina il verso
-				      delle textures che verranno applicate alla casella.
-
-			+ neighbour: RISERVATO
-			+ place: RISERVATO
-			+ nMines: RISERVATO
-			+ nChecked: RISERVATO
-
+				      delle textures che verranno applicate alla casella, la loro
+				      illuminazione e l'orientamento dei bottoni.
 
 
 	void	ResetMap (int number [IN]);
@@ -125,6 +115,9 @@ Da implementare TUTTE le seguenti funzioni:
 			Azzera la vista della mappa in gioco (number), riportando in posizione
 			di default le matrici di rotazione.
 			Viene chiamata anche all'inizio del gioco.
+			Inizializza le luci utilizzate nel gioco: sono a disposizione tutte
+			le luci offerte dalle OpenGL. La matrice MODELVIEW selezionata è
+			l'identità.
 
 
 
@@ -135,7 +128,7 @@ Da implementare TUTTE le seguenti funzioni:
 			
 
 
-	int		MouseMove (int number [IN], int dx, int dy);
+	int		MouseMove (int number [IN], GLfloat dx, GLfloat dy);
 
 			Effettua direttamente gli aggiornamenti della matrice di vista del modello del 
 			sistema OpenGL, che si presuppone già in modalità MODELVIEW.
@@ -156,12 +149,17 @@ Da implementare TUTTE le seguenti funzioni:
 
 
 
+
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
+--- IN FUTURE VERSIONI...
+------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------
+
   ******************************************************************************************
   * B) MODULO GAMEDEFINE
   ******************************************************************************************
 
-Da implementare TUTTE le seguenti funzioni:
- 
 
 	void	GetGameName (char * name [OUT]);	
 
@@ -306,7 +304,7 @@ Da implementare TUTTE le seguenti funzioni:
 
 
   ******************************************************************************************
-  * B) MODULO GRAPHICS
+  * C) MODULO GRAPHICS
   ******************************************************************************************
 
 Da implementare le funzioni che si ritengono necessarie, oltre a quelle MANDATORY:
@@ -315,12 +313,9 @@ SISTEMA MFC.
 
 	[MANDATORY]
 	void	GetVideoPluginName (char * name [OUT]);	   
-
-			Riceve il nome del plugin video che si definisce nella dll.
-			
-
-
-	void	InitOpenGL ()
+	void	InitGraphicSystem ();
+	void	CloseGraphicSystem ();
+	void	InternalTimer ();
 
 
 

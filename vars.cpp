@@ -9,19 +9,139 @@
 #include "strings.h"
 
 
-static char * varsFile = "3dmine.cfg";
+static	char * iniFile = "config.txt";
+static  char completeVarsFile [256];
+
+		const char * const DATA_DIRECTORY = "data\\";
+		const char * const PLUGINS_DIRECTORY = "plugins\\*.dll";
+
+
+
 struct GLOBAL_VARS vars;
 struct INI_VARS ini;
 
 
 extern struct	MINE_MODULE_MAPDESC * mapDescriptorList;
-RECORD *	recordArray;
+RECORD *		recordArray;
+
+
+enum	TTYPE { TINT, TSTRING, GLFLOAT, GLFLOAT4 };
+struct	VarName {
+	void	* var;
+	char	* name;
+	TTYPE	type;
+};
+
+
+
+static VarName		nametable [] = {
+	{ &ini.graph_filtering,			"graph_filtering",			TINT },
+	{ &ini.graph_bpptexture,		"graph_bpptexture",			TINT },
+	{ &ini.main_language,			"main_language",			TSTRING },
+	{ &ini.perf_idleRefresh,		"perf_idleRefresh",			TINT },
+	{ &ini.perf_internalTimer,		"perf_internalTimer",		TINT },
+	{ &ini.perf_maxFPS,				"perf_maxFPS",				TINT },
+	{ &ini.tex_file,				"tex_file",					TSTRING },
+	{ &ini.tex_height,				"tex_height",				TINT },
+	{ &ini.tex_interleave,			"tex_interleave",			TINT },
+	{ &ini.tex_width,				"tex_width",				TINT },
+
+	{ &ini.light_borderShininess,	"light_borderShininess",	GLFLOAT  },
+	{ &ini.light_faceShininess,		"light_faceShininess",		GLFLOAT	 },
+	{ ini.light_borderDiffuse,		"light_borderDiffuse",		GLFLOAT4 },
+	{ ini.light_faceDiffuse,		"light_faceDiffuse",		GLFLOAT4 },
+	{ ini.light_faceDiffuseCovered,	"light_faceDiffuseCovered",	GLFLOAT4 },
+	{ ini.light_borderSpecular,		"light_borderSpecular",		GLFLOAT4 },
+	{ ini.light_faceSpecular,		"light_faceSpecular",		GLFLOAT4 },
+
+	{ &ini.main_xSens,				"main_xSens",				GLFLOAT },
+	{ &ini.main_ySens,				"main_ySens",				GLFLOAT },
+
+	{ NULL,							"",							TINT }	};
+
+
+
+
+
+DWORD		LoadINI(char * extname)
+{
+	ini.graph_filtering = 1;			
+	ini.graph_bpptexture = 16;
+
+	strcpy (ini.main_language, "english.lng");
+	ini.main_xSens = ini.main_ySens = 1.0f;
+	
+	// Perf
+	ini.perf_internalTimer = 15;
+	ini.perf_maxFPS = 45;				
+	ini.perf_idleRefresh = 5;
+	
+	// tex
+	ini.tex_width = ini.tex_height = 32;
+	ini.tex_interleave = 0;
+	ini.tex_file[0] = 0;
+
+	// light
+	ini.light_borderShininess = 30.0f;
+	ini.light_faceShininess = 30.0f;
+	
+	ini.light_borderDiffuse[0] = 
+		ini.light_borderDiffuse[1] = 
+		ini.light_borderDiffuse[2] = 
+		ini.light_borderDiffuse[3] = 0.4f;
+
+	ini.light_borderSpecular[0] = 0.7f;
+	ini.light_borderSpecular[1] = 0.9f;
+	ini.light_borderSpecular[2] = 1.0f;
+	ini.light_borderSpecular[3] = 1.0f;
+
+    ini.light_faceDiffuse[0] =
+	    ini.light_faceDiffuse[1] =
+		ini.light_faceDiffuse[2] =
+		ini.light_faceDiffuse[3] = 0.9f;
+    ini.light_faceDiffuseCovered[0] =
+	    ini.light_faceDiffuseCovered[1] =
+		ini.light_faceDiffuseCovered[2] =
+		ini.light_faceDiffuseCovered[3] = 0.3f;
+
+	ini.light_faceSpecular[0] = 0.07f; 
+	ini.light_faceSpecular[1] = 0.09f;
+	ini.light_faceSpecular[2] = 0.1f;
+	ini.light_faceSpecular[3] = 1.0f;
+
+	FILE * file = fopen (iniFile, "rt");
+	if (!file)
+		return MIDS_VARS_NOINIFILE;
+
+	char name [128], string [128];
+	while (ReadAssignment (name, string, 128, file)) {
+		// Cerca nome
+		int idx = 0;
+		while (nametable[idx].var != NULL && strcmp (name, nametable[idx].name) != 0)
+			idx++;
+		if (nametable[idx].var == NULL) {
+			strcpy (extname, name);
+			return MIDS_VARS_UNKNOWNVAR;
+		}
+		if (nametable[idx].type == TSTRING) 
+			strcpy ((char*)nametable[idx].var, string);
+		else if (nametable[idx].type == TINT) 
+			sscanf (string, "%d", (int*)nametable[idx].var);
+		else if (nametable[idx].type == GLFLOAT) 
+			sscanf (string, "%f", (GLfloat*)nametable[idx].var);
+		else if (nametable[idx].type == GLFLOAT4) {
+			GLfloat * array = (GLfloat*)nametable[idx].var;
+			sscanf (string, "%f %f %f %f", array, array + 1, array + 2, array + 3);
+		}
+	}
+	return 0;
+}	
+
 
 
 
 static void	DefaultSettings ()
 {
-	vars.filtering = 1;
 	vars.nMapModules = 0;
 	vars.records = NULL;
 }
@@ -140,7 +260,7 @@ static int OpenSettings()
 	int i, j;
 
 	FILE * file;
-	file = fopen (varsFile, "rb");
+	file = fopen (completeVarsFile, "rb");
 	if (file == NULL)
 		return 0;
 
@@ -159,6 +279,9 @@ static int OpenSettings()
 	}
 
 	for (i=0; i<vars.nMapModules; i++) {
+		if (vars.records[i].nMaps < 0 || vars.records[i].nMaps > MAX_MODULE_MAPS_COUNT) 
+			break;
+
 		vars.records[i].visible = 0;
 		vars.records[i].records = new RECORD [vars.records[i].nMaps];
 		if (fread (vars.records[i].records, sizeof(struct RECORD), vars.records[i].nMaps, file) != (UINT)vars.records[i].nMaps)
@@ -186,10 +309,13 @@ static int OpenSettings()
 
 
 
-DWORD	LoadSettings()
+DWORD	LoadSettings(const char * const appData)
 {
 	int def = 0;
 	DWORD err;
+
+	strcpy (completeVarsFile, appData);
+	strcat (completeVarsFile, "persist.dat");
 
 	if (!OpenSettings()) {
 		DefaultSettings();
@@ -212,7 +338,7 @@ DWORD   StoreSettings ()
 	DWORD ver = CFGFILE_VER;
 
 	FILE * file;
-	file = fopen (varsFile, "wb");
+	file = fopen (completeVarsFile, "wb");
 	if (file == NULL)
 		return MIDS_MAIN_STORESETTINGS;
 	if (fwrite (&ver, sizeof (WORD), 1, file) != 1)
@@ -238,5 +364,4 @@ DWORD   StoreSettings ()
 
 	return 0;
 }
-
 

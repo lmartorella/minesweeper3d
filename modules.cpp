@@ -92,7 +92,7 @@ DWORD	ReadLibrary (const char * const name, DWORD * code)
 
 		// Mappa ok
 		mapDesc = new MINE_MODULE_MAPDESC;
-		strncpy (mapDesc->moduleName, info.name, MINE_MODULE_NAMESIZE);
+		strncpy (mapDesc->moduleName, info.modname, MINE_MODULE_NAMESIZE);
 		strcpy (mapDesc->moduleFile, name); 
 		
 		GetMapCount (&mapDesc->nMaps);

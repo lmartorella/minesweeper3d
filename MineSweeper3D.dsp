@@ -92,12 +92,20 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
+SOURCE=.\AboutDlg.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\game.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\HallsOfFameDlg.cpp
 # SUBTRACT CPP /YX /Yc /Yu
+# End Source File
+# Begin Source File
+
+SOURCE=.\HyperLink.cpp
 # End Source File
 # Begin Source File
 
@@ -136,7 +144,11 @@ SOURCE=.\WonDlg.cpp
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE="..\..\..\Programmi\Microsoft Visual Studio\VC98\Include\BASETSD.H"
+SOURCE=.\AboutDlg.h
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\..\..\Programmi\Microsoft Visual Studio\VC98\Include\BASETSD.H"
 # End Source File
 # Begin Source File
 
@@ -145,6 +157,10 @@ SOURCE=.\game.h
 # Begin Source File
 
 SOURCE=.\HallsOfFameDlg.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\HyperLink.h
 # End Source File
 # Begin Source File
 
@@ -204,11 +220,15 @@ SOURCE=.\MineSweeper3D.rc2
 # PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=.\data\english.txt
+SOURCE=.\config.txt
 # End Source File
 # Begin Source File
 
-SOURCE=.\data\italian.txt
+SOURCE=.\data\english.lng
+# End Source File
+# Begin Source File
+
+SOURCE=.\data\italian.lng
 # End Source File
 # End Group
 # Begin Source File

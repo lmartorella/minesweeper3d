@@ -3,6 +3,10 @@
 #include "stdafx.h"
 #include "strings.h"
 #include "stdio.h"
+#include "vars.h"
+
+
+extern	INI_VARS ini;
 
 
 
@@ -14,6 +18,10 @@ struct	StringResource {
 
 
 StringResource stable [] = {
+	{ MIDS_VARS_NOINIFILE,			"IDS_VARS_NOINIFILE"		},
+	{ MIDS_VARS_UNKNOWNVAR,			"IDS_VARS_UNKNOWNVAR"		},
+
+	{ MIDS_GAME_TEXBPPERROR,		  "IDS_GAME_TEXBPPERROR"		},
 	{ MIDS_GAME_TEXFILENOTFOUND		, "IDS_GAME_TEXFILENOTFOUND"		},
 	{ MIDS_GAME_TEXFILEERROR         , "IDS_GAME_TEXFILEERROR"			},
 	{ MIDS_MODULEMAP_PREPARETEXTURE  , "IDS_MODULEMAP_PREPARETEXTURE"	},
@@ -31,7 +39,7 @@ StringResource stable [] = {
 	{ MIDS_OPENGL_SETPIXELFORMAT     , "IDS_OPENGL_SETPIXELFORMAT"		},
 	{ MIDS_MAIN_PERFTIMER            , "IDS_MAIN_PERFTIMER"				},
 	{ MIDS_MAIN_STORESETTINGS        , "IDS_MAIN_STORESETTINGS"			},
-	{ MIDS_ABOUT                     , "IDS_ABOUT"						},
+	{ MIDS_ABOUT_CONTENT            , "IDS_ABOUT_CONTENT"				},
 	{ MIDS_MAIN_STANDARDLIBRARY      , "IDS_MAIN_STANDARDLIBRARY"		},
 	{ MIDS_MAIN_MENUITEMS            , "IDS_MAIN_MENUITEMS"				},
 	{ MIDS_VARS_MAPENUM              , "IDS_VARS_MAPENUM"				},
@@ -42,16 +50,31 @@ StringResource stable [] = {
 	{ MIDM_EXIT						, "IDM_EXIT"						},
 	{ MIDM_VIEW						, "IDM_VIEW"						},
 	{ MIDM_HALLSOFFAME				, "IDM_HALLSOFFAME"					},
-	{ MIDM_LINEARFILTERING			, "IDM_LINEARFILTERING"				},
 	{ MIDM_HELP						, "IDM_HELP"						},
 	{ MIDM_ABOUT						, "IDM_ABOUT"						},
+	
+	{ MIDS_ABOUT_TITLE			,	"IDS_ABOUT_TITLE"	},
+	{ MIDS_HALLSOFFAME_TITLE	,	"IDS_HALLSOFFAME_TITLE" },
+	{ MIDS_WINDLG_TITLE			 , "IDS_WINDLG_TITLE" },
+	{ MIDS_WINDLG_MESSAGE			 , "IDS_WINDLG_MESSAGE" },
+
+	{ MIDS_HOF_MAPNAME				, "IDS_HOF_MAPNAME" },
+	{ MIDS_HOF_SWEEPERNAME			, "IDS_HOF_SWEEPERNAME" },
+	{ MIDS_HOF_TIME					, "IDS_HOF_TIME" },
+	{ MIDS_HOF_DATE					, "IDS_HOF_DATE" },
 	
 	{ IDS____LAST					, ""								}
 };
 
 
 
-int		ReadAssignment (DWORD * code, char * string, int size, FILE * file)
+
+
+
+
+
+
+int		ReadAssignment (char * name, char * string, int size, FILE * file)
 {
 	char * buffer = new char[size];
 
@@ -81,35 +104,79 @@ int		ReadAssignment (DWORD * code, char * string, int size, FILE * file)
 		char temp[128];
 		if (sscanf (buffer, "%128s", temp) < 1)
 			continue;
-		if (temp[0] == '#')
+		if (temp[0] == '#' || temp[0] == '=')
 			continue;
 
 		char * eq = strchr (buffer, '=');
+		char * eq2 = eq;
 		if (eq == NULL) {
 			delete[] buffer;
 			return 0;
 		}
 
 		*eq = 0;			// spezza in due stringhe
-
-		strcpy (string, eq + 1);
-
-		int ii = 0;
-		while (stable[ii].code != IDS____LAST) {
-			if (strcmp (buffer, stable[ii].string) == 0) {
-				*code = stable[ii].code;
-				delete[] buffer;
-				return 1;
+		eq++;
+		while (*eq == ' ')
+			eq++;
+		// Gestisce i caratteri speciali in "string"
+		while (1) {
+			if (*eq == 0) {
+				*string = 0;
+				break;
 			}
-			ii++;
+			if (*eq != '\\')
+				*string = *eq;
+			else {
+				eq++;
+				if (eq[0] == 't')
+					*string = '\t';
+				else if (eq[0] == 'n')
+					*string = '\n';
+				else if (eq[0] == 'r')
+					*string = '\r';
+				else if (eq[0] == '\\')
+					*string = '\\';
+				else
+					eq--;
+			}
+			eq++;
+			string++;
 		}
 
+		eq2--;
+		while (*eq2 == ' ')
+			eq2--;
+		*(eq2 + 1) = 0;
+		strcpy (name, buffer);
+
 		delete[] buffer;
-		return 0;
+		return 1;
 	} while (1);
 }
 
 
+
+
+
+
+int		ReadStringDef (DWORD * code, char * string, int size, FILE * file)
+{
+	char * name = new char [size];
+	if (!ReadAssignment (name, string, size, file))
+		return 0;
+
+	int ii = 0;
+	while (stable[ii].code != IDS____LAST) {
+		if (strcmp (name, stable[ii].string) == 0) {
+			*code = stable[ii].code;
+			delete[] name;
+			return 1;
+		}
+		ii++;
+	}
+	delete[] name;
+	return 1;
+}
 
 
 
@@ -152,25 +219,27 @@ int		AddString (DWORD code, const char * const str)
 
 
 
-int			LoadStrings (const char * const filename)
+int			LoadStrings ()
 {
 	for (int i=0; i<NUM; i++) {
 		strings[i].code = IDS____FIRST+i+1; 
 		strings[i].string = NULL; 
 	}
 
-
-	FILE * file = fopen (filename, "rt");
+	char filename2[128];
+	strcpy (filename2, DATA_DIRECTORY);
+	strcat (filename2, ini.main_language);
+	FILE * file = fopen (filename2, "rt");
 	if (file == NULL)
 		return 0;
-	if (!AddString (MIDS_ABOUT, about))
+	if (!AddString (MIDS_ABOUT_CONTENT, about))
 		return 0;
 
 	int numb = 0;
 	DWORD code;
 	char string[512];
 
-	while (ReadAssignment (&code, string, 512, file)) {
+	while (ReadStringDef (&code, string, 512, file)) {
 		if (!AddString (code, string))
 			return 0;
 		numb++;

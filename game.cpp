@@ -85,11 +85,16 @@ static DWORD	buildTextures()
 	texName = new GLuint [TEXNUM];
     
 	// Legge immagine
-	width = TEXNUM * (ini.singleTexWidth + ini.interleaveX);
-	height = ini.singleTexHeight;
+	width = TEXNUM * (ini.tex_width + ini.tex_interleave);
+	height = ini.tex_height;
 
 	BYTE * buffer = new BYTE [width * height * 3];
-	file = fopen (ini.texFileName, "rb");
+
+	char filename[128];
+	strcpy (filename, DATA_DIRECTORY);
+	strcat (filename, ini.tex_file);
+
+	file = fopen (filename, "rb");
 	if (file == NULL) 
 		return MIDS_GAME_TEXFILENOTFOUND;
 
@@ -108,7 +113,7 @@ static DWORD	buildTextures()
 		glBindTexture(GL_TEXTURE_2D, texName[i]);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-		if (vars.filtering) {
+		if (ini.graph_filtering) {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
 		                GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -120,15 +125,26 @@ static DWORD	buildTextures()
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
 				           GL_NEAREST);
 		}
+
+		GLint comp;
+		if (ini.graph_bpptexture == 16)
+			comp = GL_RGB16;
+		else if (ini.graph_bpptexture == 24)
+			comp = GL_RGB;
+		else if (ini.graph_bpptexture == 32)
+			comp = GL_RGBA;
+		else
+			return MIDS_GAME_TEXBPPERROR;
+
 		glTexImage2D (GL_TEXTURE_2D,				// texture
 			          0,							// mipmap
-					  GL_RGB4,						// 4 componenti
-					  ini.singleTexWidth,			// w
-					  ini.singleTexHeight,			// h
+					  comp,							// 
+					  ini.tex_width,				// w
+					  ini.tex_height,				// h
 					  0,							// no border
 					  GL_RGB,						// 4 compo
 					  GL_UNSIGNED_BYTE,				// 
-		  			  buffer + i * 3 * (ini.singleTexWidth + ini.interleaveX));
+		  			  buffer + i * 3 * (ini.tex_width + ini.tex_interleave));
 	}
 	delete buffer;
 	return 0;			
@@ -567,7 +583,7 @@ DWORD selectFace (int * face)
     glLoadIdentity ();
 
     gluPickMatrix ((GLdouble)screenViewport[2] / 2.0, (GLdouble)screenViewport[3] / 2.0,
-                    ini.precision, ini.precision, screenViewport);
+                    1.0f, 1.0f, screenViewport);
 
 	p_SetCameraParams (mapIndex, screenViewport[2], screenViewport[3]); 
 
@@ -682,7 +698,7 @@ int		mouseMove (int dx, int dy)
 	if (gameStatus & GAME_STOP)
 		return 0;
 
-	int refresh = p_MouseMove (mapIndex, dx, dy);
+	int refresh = p_MouseMove (mapIndex, dx * ini.main_xSens, dy * ini.main_ySens);
 
 	if (gameStatus & GAME_ENDED)
 		return refresh;
@@ -1146,14 +1162,6 @@ int		MapPoly::ActiveKeys()
 
 
 
-void	resetGame()
-{
-	crosshair = 1;
-	gameStatus = GAME_NORMAL;
-	timer = 0;
-	needTimer = 0;
-	p_ResetMap (mapIndex);
-}
 
 
 
@@ -1227,7 +1235,11 @@ DWORD	newGame(DWORD code)
 
 	changed = map.code != code;
 	gameClose();
+	crosshair = 0;
+	gameStatus = GAME_NORMAL;
+	timer = 0;
 	needTimer = 0;
+
 
 	err = UpdateMapFunctions (code); 
 	if (err)
@@ -1247,19 +1259,17 @@ DWORD	newGame(DWORD code)
 
 	prepareMap ();						// mette le mine
 	
+	err = 0;
 	if (changed) {
-		DWORD err;
 		if (mapPoly)
 			delete mapPoly;
 		mapPoly = new MapPoly (&map, &err);
 		
 		p_DestroyMap (mapIndex, &map);
-		return err;
 	}
-	else
-		mapPoly->Reset();
-
-	return 0;
+	mapPoly->Reset();
+	p_ResetMap (mapIndex);
+	return err;
 }
 
 
@@ -1268,13 +1278,13 @@ DWORD	newGame(DWORD code)
 
 
 
-int		GetTextPlace (int place, GLuint * name, GLfloat * diffuse)
+int		GetTextPlace (int place, GLuint * name, GLfloat ** diffuse)
 {
 	if ((place & (MAP_PLACE_COVERED | MAP_PLACE_FLAG)) == MAP_PLACE_COVERED) {
-		diffuse[0] = diffuse[1] = diffuse[2] =  0.3f;
+		*diffuse = ini.light_faceDiffuseCovered;
 		return 0;
 	}
-	diffuse[0] = diffuse[1] = diffuse[2] =  0.9f;
+	*diffuse = ini.light_faceDiffuse;
 	if (place == 0) 
 		return 0;
 	else if (place & MAP_PLACE_FALSEFLAG)
@@ -1313,16 +1323,8 @@ DWORD	renderer ()
 	glEnable (GL_LIGHTING);
 
 	glShadeModel (GL_FLAT);
-	glMaterialf (GL_FRONT, GL_SHININESS, 30.0);
 
 	// ****************************** MODEL
-	GLfloat face_specular[] = {179.0f/2560, 227.0f/2560, 0.1f, 1};
-	GLfloat border_specular[] = {179.0f/256, 227.0f/256, 1.0f, 1};
-
-	GLfloat face_diffuse[4];
-	GLfloat border_diffuse[] = {0.4f, 0.4f, 0.4f, 0.4f};
-
-
 	Point3D vtemp [MAX_VERTEX_FACE];
 
 
@@ -1331,11 +1333,13 @@ DWORD	renderer ()
 		int n = mapPoly->edges[i];
 
 		GLuint name;
-		int isTexture = GetTextPlace (m, &name, face_diffuse);
+		GLfloat * faceDiffuse;
+		int isTexture = GetTextPlace (m, &name, &faceDiffuse);
+		glMaterialfv (GL_FRONT, GL_DIFFUSE, faceDiffuse);
 
 		// Materiale faccia
-		glMaterialfv (GL_FRONT, GL_SPECULAR, face_specular);
-		glMaterialfv (GL_FRONT, GL_DIFFUSE, face_diffuse);
+		glMaterialfv (GL_FRONT, GL_SPECULAR, ini.light_faceSpecular);
+		glMaterialf (GL_FRONT, GL_SHININESS, ini.light_faceShininess);
 
 		// Tasto
 		for (int j=0; j<n; j++)
@@ -1367,9 +1371,14 @@ DWORD	renderer ()
 			glEnd();
 		}
 
-		// Normale ai bordi
-		for (int k = 0; k < mapPoly->edges[i]; k++) {
-			int k1 = (k+1) % (mapPoly->edges[i]);
+		// Bordo dei tasti
+		glDisable (GL_TEXTURE_2D);
+		glColor3f (0.2f, 0.2f, 0.2f);
+		glMaterialfv (GL_FRONT, GL_SPECULAR, ini.light_borderSpecular);
+		glMaterialfv (GL_FRONT, GL_DIFFUSE, ini.light_borderDiffuse);
+
+		for (int k = 0; k < n; k++) {
+			int k1 = (k+1) % n;
 
 			Vector3D normal = (vtemp[k1] - vtemp[k]) *
 				              (mapPoly->origVert[i][k] - vtemp[k]);			
@@ -1378,10 +1387,6 @@ DWORD	renderer ()
 			mapPoly->bordNormal[i][k] = normal;
 		}
 
-		glDisable (GL_TEXTURE_2D);
-		glColor3f (0.2f, 0.2f, 0.2f);
-		glMaterialfv (GL_FRONT, GL_SPECULAR, border_specular);
-		glMaterialfv (GL_FRONT, GL_DIFFUSE, border_diffuse);
 
 		for (j = 0; j < n; j++) {
 			glBegin (GL_POLYGON);
@@ -1394,6 +1399,7 @@ DWORD	renderer ()
 			glEnd ();
 		}
 	}
+
 
 	/* ----------------- 2D mode ------------------ */
 	glDisable (GL_TEXTURE_2D);

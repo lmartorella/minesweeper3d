@@ -66,7 +66,6 @@ private:
 	void LoadPlugins();
 	void OnOK();
 
-	void MINEUpdateMapMenu();
 	void MINESetMenus();
 	int  MINECheckMenuItem (DWORD code, int);
 	void MINEEnableMenuItem (DWORD code, int);

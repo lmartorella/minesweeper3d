@@ -26,18 +26,24 @@
 #define		MINE_UNLOCK				0x80000000
 
 
+typedef void (*GETMINEINFO_TYPE)(unsigned int *, MINE_MODULE_INFO *);
+typedef void (*GETMAPCOUNT_TYPE)(unsigned int *);
+typedef void (*GETMAPNAME_TYPE)(int, char *);
+typedef void (*BUILDMAP_TYPE)(int, MINESWEEPER_MAP *);
+typedef void (*DESTROYMAP_TYPE)(int, MINESWEEPER_MAP *);
+typedef void (*RESETMAP_TYPE)(int);
+typedef int	 (*MOUSEMOVE_TYPE)(int, GLfloat, GLfloat);
+typedef void (*SETCAMERAPARAMS_TYPE)(int, int, int);
 
 
 	void	changeWindowSize(int width, int height);
 	DWORD	rebuildTextures();
-	DWORD	buildStructure ();
 	DWORD	postBuildMap();
 	void	postDestroyMap ();
 	void	placeNumbers ();
 
 	int		gameInit(int rebuild);
 	void	gameClose();
-	void	resetGame();
 	DWORD	newGame(DWORD code);
 
 	DWORD	mine_init ();

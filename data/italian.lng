@@ -1,4 +1,4 @@
-
+IDS_GAME_TEXBPPERROR=Numero di bit per pixel nelle textures errato
 IDS_GAME_TEXFILENOTFOUND=File delle texture non trovato
 IDS_GAME_TEXFILEERROR=Errore nella lettura delle texture
 IDS_MODULEMAP_PREPARETEXTURE=Errore nella preparazione delle texture dal modulo esterno
@@ -20,14 +20,25 @@ IDS_MAIN_STANDARDLIBRARY=Non trovo la libreria standard di mappe! ("plugins\\sta
 IDS_MAIN_MENUITEMS=Errore generico di menu
 IDS_VARS_MAPENUM=Errore generico di enumerazione mappa in salvataggio settaggi
 IDS_VARS_DEFAULTSETTING=Caricati i settaggi standard
+IDS_VARS_NOINIFILE=Non ho trovato il file di configurazione
+IDS_VARS_UNKNOWNVAR=Variabile sconosciuta "%s" nel file di configurazione
+
+IDS_ABOUT_TITLE=Informazioni su MineSweeper3D
+IDS_WINDLG_TITLE=Hai vinto!
+IDS_WINDLG_MESSAGE=Inserisci il tuo nome:
+IDS_HALLSOFFAME_TITLE=Sala dei più famosi
+
+IDS_HOF_MAPNAME=Nome mappa
+IDS_HOF_SWEEPERNAME=Vincitore
+IDS_HOF_TIME=Tempo
+IDS_HOF_DATE=Data
 
 IDM_GAME=&Gioco
-IDM_RESTART_GAME=&Ricomincia
+IDM_RESTART_GAME=&Ricomincia\tF2
 IDM_NEW_GAME=&Nuovo gioco...
 IDM_EXIT=&Esci
 IDM_VIEW=&Visualizza
 IDM_HALLSOFFAME=&Record...
-IDM_LINEARFILTERING=&Filtraggio lineare
 IDM_HELP=&Aiuto
 IDM_ABOUT=&Informazioni...
 

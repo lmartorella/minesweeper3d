@@ -22,6 +22,7 @@ public:
 	//{{AFX_DATA(CHallsOfFameDlg)
 	enum { IDD = IDD_HALLSOFFAME };
 	CListCtrl	m_list;
+	CString	m_title;
 	//}}AFX_DATA
 
 

@@ -5,9 +5,6 @@
 #include "..\..\library.h"
 
 
-
-
-
 void	GetGameName (char * name)
 {
 	strcpy (name, "Standard game");

@@ -17,6 +17,7 @@ public:
 	enum { IDD = IDD_RECORD };
 	CEdit	m_edit;
 	CString	m_name;
+	CString	m_static1;
 	//}}AFX_DATA
 
 

@@ -11,22 +11,24 @@
 #define Z_VIEW			-3.6f
 #define Z_MIN			0.1f
 #define Z_MAX			10.0f
-#define FOV_ICOSAH		32.0f
+
+#define FOV_ICOSAH		33.5f
 #define	FOV_PLANE		105.0		
 
-#define X_SENS 2.25e-03f
-#define Y_SENS 2.25e-03f
+#define BASE_SENS		2.25e-03f
 
-
-
+GLfloat		xSens, ySens;
 
 GLfloat	rot[16];
 GLfloat xPos, yPos;				// per plane
 
 
+
 void	GetMineInfo (int * versione, struct MINE_MODULE_INFO * m)
 {
-	strcpy (m->name, "minesw/original/standard");
+	strcpy (m->modname, "minesw/original/standard");
+	strcpy (m->author, "Noinet Corp.");
+	strcpy (m->topic, "Standard maps.");
 	*versione = 0x100;
 }
 
@@ -38,10 +40,10 @@ void	GetMapCount (int * count)
 }
 
 
-static char  names[4][32] = {   "Original Winmine",
-								"2-Icosahedron (80)", 
-							    "3-Icosahedron (320)", 
-								"4-Icosahedron (1280)" };
+static char  names[4][32] = {   "Original Winmine: Expert",
+								"2th-Icosahedron", 
+							    "3rd-Icosahedron", 
+								"4th-Icosahedron" };
 
 
 
@@ -336,9 +338,7 @@ void subdivide(int index, int *lastVertex, int *lastTriangle, int *lastSide)
 
 
 
-static int mines [4] = { 99, 8, 32, 128 };
-
-
+static int mines [4] = { 99, 10, 40, 168 };
 
 
 
@@ -463,15 +463,15 @@ void	mult (GLfloat * m1, GLfloat * m2, GLfloat * r)
 
 
 
-int		MouseMove(int mapIdx, int dx, int dy)
+int		MouseMove(int mapIdx, GLfloat dx, GLfloat dy)
 {
 	if (mapIdx > 0) {
 		GLfloat x, y, cf, sf, ct, st;
 		static GLfloat	rotxy[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}, 
 						r[16]     = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
 
-		y = dy * X_SENS;
-		x = dx * Y_SENS;
+		y = dy * xSens;
+		x = dx * ySens;
 	
 		ct = (float)cos (x), st = (float)sin (x);
 		cf = (float)cos (y), sf = (float)sin (y);
@@ -492,8 +492,8 @@ int		MouseMove(int mapIdx, int dx, int dy)
 	}
 	else {
 		// Plane
-		xPos -= dx * X_SENS * 6;
-		yPos += dy * Y_SENS * 6;
+		xPos -= dx * xSens * 6;
+		yPos += dy * ySens  * 6;
 		if (xPos < 0)
 			xPos = 0.0;
 		else if (xPos > 30)
@@ -543,6 +543,11 @@ void	ResetMap (int map)
 	}
 
 	glEnable (GL_LIGHT0);
+
+	if (map >= 1) 
+		ySens = xSens = BASE_SENS / map;
+	else 
+		xSens = ySens = BASE_SENS  / 2.0f;
 }
 
 

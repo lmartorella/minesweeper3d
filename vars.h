@@ -6,7 +6,10 @@
 
 #include "modules.h"
 
-#define CFGFILE_VER 0x307
+#define CFGFILE_VER 0x100
+
+extern	const char * const DATA_DIRECTORY;
+extern	const char * const PLUGINS_DIRECTORY;
 
 
 struct	RECORD {
@@ -28,27 +31,50 @@ struct	MINE_VARS_MAPRECORD {
 
 
 struct	GLOBAL_VARS {
-	int						nMapModules;
-	int						filtering;
+	int								nMapModules;
 	struct MINE_VARS_MAPRECORD *	records; 
 };
 
 
 
 struct	INI_VARS {
-	int		singleTexWidth, singleTexHeight;
-	int		interleaveX;
-	char 	texFileName [128];
-	
-	GLfloat precision;
+	// Textures
+	int		tex_width, tex_height;
+	int		tex_interleave;
+	char 	tex_file [128];
+
+	// Perf
+	int		perf_internalTimer;			// in Win9x max 18.2 Hz
+	int		perf_maxFPS;				// può essere 0
+	int		perf_idleRefresh;			// cicli internal per refresh passivo
+
+	// Graphics
+	int		graph_filtering;			// 0 o 1
+	int		graph_bpptexture;			// 16, 24 o 32
+
+	// Lights
+	GLfloat		light_borderShininess;
+	GLfloat		light_faceShininess;
+	GLfloat		light_borderDiffuse [4];
+	GLfloat		light_faceDiffuse [4];
+	GLfloat		light_faceDiffuseCovered [4];
+	GLfloat		light_borderSpecular [4];
+	GLfloat		light_faceSpecular [4];
+
+	// Main
+	char		main_language [128];
+	GLfloat		main_xSens;
+	GLfloat		main_ySens;
 };
 
 
-	DWORD	LoadSettings();
+	DWORD	LoadSettings(const char * const appData);
 	DWORD	StoreSettings ();
 	char *	getDate (UINT date);
 	UINT    buildDate (unsigned int day, unsigned int month, unsigned int year);
 	RECORD	*	GetRecordArray (const char * const moduleName, int mapIdx);
+
+	DWORD	LoadINI(char * name);
 
 
 #endif

@@ -13,6 +13,9 @@
 #include "MineSweeper3DDlg.h"
 #include "HallsOfFameDlg.h"
 #include "WonDlg.h"
+#include "AboutDlg.h"
+
+#include <shlobj.h>
 
 
 
@@ -181,55 +184,6 @@ BOOL CMineSweeper3DApp::InitInstance()
 }
 
 
-
-/////////////////////////////////////////////////////////////////////////////
-// CAboutDlg dialog used for App About
-
-class CAboutDlg : public CDialog
-{
-public:
-	CAboutDlg();
-
-// Dialog Data
-	//{{AFX_DATA(CAboutDlg)
-	enum { IDD = IDD_ABOUTBOX };
-	CString	m_version;
-	//}}AFX_DATA
-
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CAboutDlg)
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	//}}AFX_VIRTUAL
-
-// Implementation
-protected:
-	//{{AFX_MSG(CAboutDlg)
-	virtual BOOL OnInitDialog();
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
-};
-
-CAboutDlg::CAboutDlg() : CDialog(CAboutDlg::IDD)
-{
-	//{{AFX_DATA_INIT(CAboutDlg)
-	m_version = _T("");
-	//}}AFX_DATA_INIT
-}
-
-void CAboutDlg::DoDataExchange(CDataExchange* pDX)
-{
-	CDialog::DoDataExchange(pDX);
-	//{{AFX_DATA_MAP(CAboutDlg)
-	DDX_Text(pDX, IDC_VERSION, m_version);
-	//}}AFX_DATA_MAP
-}
-
-BEGIN_MESSAGE_MAP(CAboutDlg, CDialog)
-	//{{AFX_MSG_MAP(CAboutDlg)
-	//}}AFX_MSG_MAP
-END_MESSAGE_MAP()
-
 /////////////////////////////////////////////////////////////////////////////
 // CMineSweeper3DDlg dialog
 
@@ -290,29 +244,50 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
-	if (!LoadStrings ("data\\italian.txt")) {
-		AfxMessageBox ("Error in loading messages\r\nErrore nel caricamento dei messaggi");
+
+	// INI
+	char ininame[128];
+	DWORD iniErr = LoadINI(ininame);
+
+	// Stringhe - messaggi di errore - menus
+	if (!LoadStrings ()) {
+		AfxMessageBox ("Error in loading language\r\nErrore nel caricamento del linguaggio");
 		exit(1);
 	}
-	MINESetMenus();
+	
+	if (iniErr != 0) {
+		char temp[128];
+		sprintf (temp, GetString (iniErr), ininame);
+		AfxMessageBox (temp, MB_OK | MB_ICONEXCLAMATION);
+	}
 
-	srand (time(NULL));
+	// Apertura plugins - aggiornamento menu
+	gaming = false;
 	activeMap = 0;
 	mapCodeProgressive = ID_NEWMAP_GAME;
-	ini.interleaveX = 1;
-	ini.precision = 1.0;
-	ini.singleTexHeight = 32;
-	ini.singleTexWidth = 32;
-	strcpy (ini.texFileName, "data\\textures.raw");
-
-	// Apertura plugins
 	LoadPlugins();
 
-	// ...e in base ai plugins disponibili...
-	DWORD err = LoadSettings ();
+	// In base ai plugins disponibili...
+	char appData [MAX_PATH];
+	if (SHGetSpecialFolderPath (NULL, 
+							appData,
+							CSIDL_APPDATA,
+							1) != TRUE)
+			strcpy (appData, ".\\");
+	else {
+		strcat (appData, "\\MineSweeper3D");
+		CreateDirectory (appData, NULL);
+		strcat (appData, "\\");
+	}
+
+	DWORD err = LoadSettings (appData);
     if (err) 
 		AfxMessageBox (GetString(err), MB_OK | MB_ICONEXCLAMATION);
 	
+	// ...costruisce menu
+	MINESetMenus();
+
+	// OpenGL
 	pDC = GetDC();
 	err = prepareOpenGL(pDC->m_hDC);
     if (err) {
@@ -321,6 +296,8 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 		exit (1);
 	}
 
+	// Timers
+	srand (time(NULL));
 
 	LARGE_INTEGER perfPeriod;
 	if (!QueryPerformanceFrequency (&perfPeriod)) {
@@ -329,21 +306,24 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 		exit (1);
 	}
 
-	gaming = false;
-	SetTimer (EVENTTIMER, 1000 / 15, NULL);		// per rinfresco tastini a 15 Hz
-	minPeriodRefresh.QuadPart = perfPeriod.QuadPart / 45;			// max 45 Hz
+	SetTimer (EVENTTIMER, 
+			  1000 / ini.perf_internalTimer, 
+			  NULL);								// per rinfresco tastini, timer gen.
+
+	minPeriodRefresh.QuadPart = (ini.perf_maxFPS > 0) ?
+		perfPeriod.QuadPart / ini.perf_maxFPS
+		: 0;										// max FPS
 	
 	cursorSetting = false;
 	poll = 0;
 
+	// Init game
 	err = mine_init();
 	if (err) {
 		AfxMessageBox (GetString(err), MB_OK | MB_ICONSTOP);
 		DeleteStrings();
 		exit (1);
 	}
-
-	MINECheckMenuItem (MIDM_LINEARFILTERING, vars.filtering);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -433,6 +413,8 @@ BOOL CMineSweeper3DDlg::DestroyWindow()
 }
 
 
+
+
 void CMineSweeper3DDlg::OnSize(UINT nType, int cx, int cy) 
 {
 	CDialog::OnSize(nType, cx, cy);
@@ -444,6 +426,8 @@ void CMineSweeper3DDlg::OnSize(UINT nType, int cx, int cy)
 
 	cursorSetting = true;
 }
+
+
 
 
 void CMineSweeper3DDlg::OnRButtonDblClk(UINT nFlags, CPoint point) 
@@ -577,8 +561,6 @@ BOOL CMineSweeper3DDlg::OnCommand(WPARAM wParam, LPARAM lParam)
 {
 	CAboutDlg * dlgAbout;
 	CHallsOfFameDlg * dlgFame;
-	int checked;
-	DWORD err;
 
 	switch (wParam) {
 	case IDM_ABOUTBOX:
@@ -598,19 +580,8 @@ BOOL CMineSweeper3DDlg::OnCommand(WPARAM wParam, LPARAM lParam)
 	case MIDM_RESTART_GAME:
 		NewGame (activeMap);	
 		return TRUE;
-	case MIDM_LINEARFILTERING:
-		checked = MINECheckMenuItem (MIDM_LINEARFILTERING, 1);
-		if (checked) {
-			MINECheckMenuItem (MIDM_LINEARFILTERING, 0);
-			vars.filtering = 0;
-		}
-		else 
-			vars.filtering = 1;	
-		err = rebuildTextures(); 
-		if (err != 0) {
-			AfxMessageBox (GetString(err), MB_OK | MB_ICONSTOP);
-			PostQuitMessage(0);
-		}
+	case MIDM_HELP:
+		GotoURL("help\\index.html", 1);
 		return TRUE;
 
 	default:
@@ -689,22 +660,10 @@ void CMineSweeper3DDlg::OnTimer(UINT nIDEvent)
 	if (nIDEvent != EVENTTIMER)
 		CDialog::OnTimer(nIDEvent);
 
-	if (timerProc() || (++poll >= 5 && mapReady)) {
+	if (timerProc() || (++poll >= ini.perf_idleRefresh && mapReady)) {
 		PostMessage (WM_PAINT);
 		poll = 0;
 	}
-}
-
-
-BOOL CAboutDlg::OnInitDialog() 
-{
-	CDialog::OnInitDialog();
-
-	m_version = GetString(MIDS_ABOUT);
-	UpdateData (FALSE);
-
-	return TRUE;  // return TRUE unless you set the focus to a control
-	              // EXCEPTION: OCX Property Pages should return FALSE
 }
 
 
@@ -723,7 +682,7 @@ void CMineSweeper3DDlg::OnOK()
 void CMineSweeper3DDlg::LoadPlugins()
 {
 	CFileFind finder;
-	BOOL work = finder.FindFile ("plugins\\*.dll");
+	BOOL work = finder.FindFile (PLUGINS_DIRECTORY);
 	while (work) {
 		work = finder.FindNextFile();
 		if (finder.IsDots())
@@ -740,10 +699,6 @@ void CMineSweeper3DDlg::LoadPlugins()
 			AfxMessageBox (f, MB_OK | MB_ICONEXCLAMATION);
 		}
 	}
-
-	// Ok, liste aggiornate.
-	// Aggiornamento menu mappa
-	MINEUpdateMapMenu();
 }
 
 
@@ -824,29 +779,6 @@ int FindMenuItem(CMenu* Menu, DWORD command)
 }
 
 
-void CMineSweeper3DDlg::MINEUpdateMapMenu()
-{
-	// Aggiorna voci del menu
-	CMenu * menu = GetMenu ();
-	int f = FindMenuItem (menu, GetString(MIDM_GAME));
-	menu = menu->GetSubMenu(f);
-	f = FindMenuItem (menu, GetString(MIDM_NEW_GAME));
-	menu = menu->GetSubMenu(f);
-
-	while (menu->DeleteMenu(0, MF_BYPOSITION) != 0);
-
-	MINE_MODULE_MAPDESC * p = mapDescriptorList;
-	while (p != NULL) { 
-		for (unsigned int i = 0; i < p->nMaps; i++)
-			menu->AppendMenu (MF_STRING, p->mapDesc[i].code, p->mapDesc[i].name);
-		p = p->next;
-		if (p != NULL)
-			menu->AppendMenu (MF_SEPARATOR);
-	}
-}
-
-
-
 
 void	CMineSweeper3DDlg::NewGame (DWORD code)
 {
@@ -865,7 +797,6 @@ void	CMineSweeper3DDlg::NewGame (DWORD code)
 	activeMap = code;
 	winner = 1;
 
-	resetGame();
 	mouseMove (0, 0);
 
 	lastFrameRendered.QuadPart = 0;
@@ -893,7 +824,7 @@ int		CMineSweeper3DDlg::MINECheckMenuItem (DWORD code, int ch)
 void	CMineSweeper3DDlg::MINEEnableMenuItem (DWORD code, int ch)
 {
 	DWORD comm = ch ? MF_ENABLED : MF_GRAYED;
-	EnableMenuItem (GetMenu()->m_hMenu, code, comm);
+	EnableMenuItem (GetMenu()->m_hMenu, MF_BYCOMMAND | code, comm);
 }
 
 void	CMineSweeper3DDlg::MINESetMenus ()
@@ -901,13 +832,25 @@ void	CMineSweeper3DDlg::MINESetMenus ()
 	// Struttura attuale del menu
 	static CMenu menuGame;
 	menuGame.CreateMenu();
-	menuGame.InsertMenu (-1, MF_BYPOSITION | MF_STRING, 
+	menuGame.InsertMenu (-1, MF_BYPOSITION | MF_STRING | MF_GRAYED, 
 						    MIDM_RESTART_GAME, 
 							GetString (MIDM_RESTART_GAME));
 
+
+	// Menu mappe
 	static CMenu submenuGame;
 	submenuGame.CreateMenu();
-	submenuGame.InsertMenu (-1, MF_BYPOSITION | MF_SEPARATOR);
+	MINE_MODULE_MAPDESC * p = mapDescriptorList;
+	while (p != NULL) { 
+		for (unsigned int i = 0; i < p->nMaps; i++)
+			submenuGame.InsertMenu (-1, MF_BYPOSITION | MF_STRING, 
+									 p->mapDesc[i].code, 
+									 p->mapDesc[i].name);
+		p = p->next;
+		if (p != NULL)
+			submenuGame.InsertMenu (-1, MF_BYPOSITION | MF_SEPARATOR);
+	}
+
 	menuGame.InsertMenu (-1, MF_BYPOSITION | MF_POPUP | MF_STRING, 
 						    (DWORD)submenuGame.m_hMenu, 
 							GetString (MIDM_NEW_GAME));
@@ -927,10 +870,6 @@ void	CMineSweeper3DDlg::MINESetMenus ()
 	viewMenu.InsertMenu (-1, MF_BYPOSITION | MF_STRING,
 							MIDM_HALLSOFFAME,
 							GetString(MIDM_HALLSOFFAME));
-	viewMenu.InsertMenu (-1, MF_BYPOSITION | MF_SEPARATOR);
-	viewMenu.InsertMenu (-1, MF_BYPOSITION | MF_STRING,
-							MIDM_LINEARFILTERING,
-							GetString(MIDM_LINEARFILTERING));
 	menu.InsertMenu		(-1, MF_BYPOSITION | MF_STRING | MF_POPUP, 
 						    DWORD(viewMenu.m_hMenu), 
 							GetString (MIDM_VIEW));
@@ -950,4 +889,6 @@ void	CMineSweeper3DDlg::MINESetMenus ()
 	
 	SetMenu(&menu);
 }
+
+
 

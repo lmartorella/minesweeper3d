@@ -1,3 +1,4 @@
+IDS_GAME_TEXBPPERROR=Error in specification texture bpp
 IDS_GAME_TEXFILENOTFOUND=Standard Texfile not found
 IDS_GAME_TEXFILEERROR=Error reading standard Texfile
 IDS_MODULEMAP_PREPARETEXTURE=Error in preparing texture in external module
@@ -19,14 +20,25 @@ IDS_MAIN_STANDARDLIBRARY=Cannot find standard library! (plugins\\standard.dll)
 IDS_MAIN_MENUITEMS=Error in handling menu items
 IDS_VARS_MAPENUM=Map handling error in saving data
 IDS_VARS_DEFAULTSETTING=Default setting loaded
+IDS_VARS_NOINIFILE=Cannot find configuration file
+IDS_VARS_UNKNOWNVAR=Unknown variable "%s" in configuration file
+
+IDS_ABOUT_TITLE=About MineSweeper3D
+IDS_WINDLG_TITLE=You win!
+IDS_WINDLG_MESSAGE=Insert your name:
+IDS_HALLSOFFAME_TITLE=Halls of fame
+
+IDS_HOF_MAPNAME=Map name
+IDS_HOF_SWEEPERNAME=Sweeper
+IDS_HOF_TIME=Time
+IDS_HOF_DATE=Date
 
 IDM_GAME=&Game
-IDM_RESTART_GAME=&Restart game
+IDM_RESTART_GAME=&Restart game\tF2
 IDM_NEW_GAME=&New game...
 IDM_EXIT=&Exit
 IDM_VIEW=&View
 IDM_HALLSOFFAME=&Halls of fame...
-IDM_LINEARFILTERING=&Linear filtering
 IDM_HELP=&Help
 IDM_ABOUT=&About...
 

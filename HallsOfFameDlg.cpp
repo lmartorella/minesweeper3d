@@ -5,7 +5,7 @@
 
 #include "MineSweeper3D.h"
 #include "HallsOfFameDlg.h"
-
+#include "strings.h"
 #include "vars.h"
 
 
@@ -25,6 +25,7 @@ CHallsOfFameDlg::CHallsOfFameDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CHallsOfFameDlg::IDD, pParent)
 {
 	//{{AFX_DATA_INIT(CHallsOfFameDlg)
+	m_title = _T("");
 	//}}AFX_DATA_INIT
 }
 
@@ -34,6 +35,7 @@ void CHallsOfFameDlg::DoDataExchange(CDataExchange* pDX)
 	CDialog::DoDataExchange(pDX);
 	//{{AFX_DATA_MAP(CHallsOfFameDlg)
 	DDX_Control(pDX, IDC_LIST2, m_list);
+	DDX_Text(pDX, IDC_STATIC1, m_title);
 	//}}AFX_DATA_MAP
 }
 
@@ -50,11 +52,14 @@ BOOL CHallsOfFameDlg::OnInitDialog()
 {
 	CDialog::OnInitDialog();
 
+	SetWindowText (GetString(MIDS_HALLSOFFAME_TITLE));
+	m_title = GetString(MIDS_HALLSOFFAME_TITLE);
+
 	// Aggiusta la listbox
-	m_list.InsertColumn (0, "Map name", LVCFMT_LEFT, 100);
-	m_list.InsertColumn (1, "Sweeper", LVCFMT_LEFT, 100);
-	m_list.InsertColumn (2, "Time", LVCFMT_LEFT, 100);
-	m_list.InsertColumn (3, "Date", LVCFMT_LEFT, 100);
+	m_list.InsertColumn (0, GetString (MIDS_HOF_MAPNAME), LVCFMT_LEFT, 100);
+	m_list.InsertColumn (1, GetString (MIDS_HOF_SWEEPERNAME), LVCFMT_LEFT, 100);
+	m_list.InsertColumn (2, GetString (MIDS_HOF_TIME), LVCFMT_LEFT, 100);
+	m_list.InsertColumn (3, GetString (MIDS_HOF_DATE), LVCFMT_LEFT, 100);
 
 	// Ciclo dei moduli
 	for (int i=0, c = 0; i<vars.nMapModules; i++) {
