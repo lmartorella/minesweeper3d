@@ -217,17 +217,6 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "&Exit",                       IDM_FILE_EXIT
     END
-    POPUP "&Library"
-    BEGIN
-        POPUP "Select &Game type"
-        BEGIN
-            MENUITEM SEPARATOR
-        END
-        POPUP "Select &Renderer"
-        BEGIN
-            MENUITEM SEPARATOR
-        END
-    END
     POPUP "&View"
     BEGIN
         MENUITEM "&Halls of Fame",              IDM_HALLSOFFAME
@@ -249,48 +238,6 @@ END
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDI_ICON1               ICON    DISCARDABLE     "mainico.ico"
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// String Table
-//
-
-STRINGTABLE DISCARDABLE 
-BEGIN
-    IDS_VERSION             "0.52"
-    IDS_GAME_TEXFILENOTFOUND "Standard Texfile not found"
-    IDS_GAME_TEXFILEERROR   "Error reading standard Texfile"
-    IDS_MODULEMAP_PREPARETEXTURE 
-                            "Error in preparing texture in external module"
-    IDS_GAME_MAPDEFERR      "Map definition error"
-    IDS_GAME_SELECTION      "Selection stack error"
-    IDS_MODULE_MAPSELECTION "Error in selection map type"
-    IDS_MAP_TOONEIGHBOURS   "Too neighbours in map place "
-    IDS_MODULE_CANTLOAD     "Can't load %s library"
-    IDS_MODULE_INVALIDLIBRARY 
-                            "The library %s ins't a valid Minesweeper library"
-END
-
-STRINGTABLE DISCARDABLE 
-BEGIN
-    IDS_MODULE_VERSION      "The library %s is not a version supported"
-    IDS_MODULE_INVALIDMAPMOD "The library %s contains an invalid map module"
-    IDS_MODULE_TOOMAPS      "Too maps in %s library"
-    IDS_MODULE_INVALIDGAMEMOD "The library %s contains an invalid game module"
-    IDS_OPENGL_CHOOSEPIXELFORMAT 
-                            "ChoosePixelFormat() failed:\r\nCannot find a suitable pixel format"
-    IDS_OPENGL_SETPIXELFORMAT 
-                            "SetPixelFormat() failed:\r\nCannot set format specified"
-    IDS_MAIN_PERFTIMER      "Performance Timer not supported by hardware"
-    IDS_MAIN_STORESETTINGS  "Cannot store settings"
-    IDS_ABOUT               "MineSweeper 3D - Version "
-    IDS_MAIN_STANDARDLIBRARY 
-                            "Cannot find standard library! (plugins\\standard.dll)"
-    IDS_MAIN_MENUITEMS      "Error in handling menu items"
-    IDS_VARS_MAPENUM        "Map handling error in saving data"
-    IDS_VARS_DEFAULTSETTING "Default setting loaded"
-END
-
 #endif    // Italian (Italy) resources
 /////////////////////////////////////////////////////////////////////////////
 

@@ -13,12 +13,12 @@ Class2=CMineSweeper3DDlg
 Class3=CAboutDlg
 
 ResourceCount=6
-Resource1=IDD_HALLSOFFAME
+Resource1=IDD_MINESWEEPER3D_DIALOG
 Resource2=IDR_MAINFRAME
-Resource3=IDD_MINESWEEPER3D_DIALOG
-Resource4=IDD_ABOUTBOX
+Resource3=IDD_ABOUTBOX
+Resource4=IDD_RECORD
 Class4=CHallsOfFameDlg
-Resource5=IDD_RECORD
+Resource5=IDD_HALLSOFFAME
 Class5=CWonDlg
 Resource6=IDR_MENU1
 

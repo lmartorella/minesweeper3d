@@ -183,27 +183,6 @@ int		MouseButton				   (int msg,
 
 
 
-void	PrepareMap (struct MINESWEEPER_MAP * map, PLACENUMBERS_TYPE placeNumbers_callback)
-{
-	int i, j;
-
-	map->nMines = map->initialMines;
-
-	// Mette mine
-	for (i = 0; i < map->nPlaces; i++)
-		map->place[i] = MAP_PLACE_COVERED;
-
-	for (i = 0; i < map->initialMines; i++) {
-		do {
-			j = (int)(((double)(rand()) / RAND_MAX) * map->nPlaces);
-		} while (j < 0 || j >= map->nPlaces || map->place[j] & MAP_PLACE_MINE);
-		map->place[j] |= MAP_PLACE_MINE;
-	}
-
-	// Ora setta i numeri
-	placeNumbers_callback();
-}		
-
 
 
 int		GetTextureName	(int place, GLuint * tex)

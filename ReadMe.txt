@@ -1,12 +1,17 @@
-MineSweeper 3D  V.0.51
-	        18/02/2002
+MineSweeper 3D  V.0.60
+	        11/03/2002
 Free Distribution
 
 
 Please report bug/suggestion at s190639@studenti.ing.unipi.it
 
 
+Version 0.60
+* Best graphics, buttons!
+* Only simplified module map.
+
 New in 0.52 		
+* Modules graphics
 * Fixed minor bugs (crosshair...)
 * Accelerator key F2
 

@@ -1,8 +1,12 @@
 
 
-#include "stdafx2.h"
+// WINDOWS SPECIFIC & OPENGL!!
+#include "stdafx.h"
+
 #include "library.h"
-#include "resource.h"
+#include "strings.h"
+#include "game.h"
+
 
 
 
@@ -61,10 +65,10 @@ static int	enumerateNeighbours (int idx, int * buffer, int bufferSize)
 void	postDestroyMap()
 {
 	if (map.neighbour)
-		free (map.neighbour);
+		delete map.neighbour;
 	map.neighbour = NULL;
 	if (map.place)
-		free (map.place);
+		delete map.place;
 	map.place = NULL;
 }
 
@@ -73,8 +77,8 @@ void	postDestroyMap()
 DWORD	postBuildMap ()
 {
 	int i, j, k;
-	map.neighbour = (struct MINESWEEPER_NEIGHBOUR*) malloc (sizeof (struct MINESWEEPER_NEIGHBOUR) * map.nPlaces);
-	map.place = (int*) malloc (sizeof (int) * map.nPlaces);
+	map.neighbour = new MINESWEEPER_NEIGHBOUR [map.nPlaces];
+	map.place = new int [map.nPlaces];
 
 	for (i=0; i<map.nPlaces; i++) {
 		if ((k = enumerateNeighbours (i, map.neighbour[i].n, MAX_NEIGHBOURS)) > MAX_NEIGHBOURS)

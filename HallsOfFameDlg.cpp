@@ -2,9 +2,10 @@
 //
 
 #include "stdafx.h"
-#include "library.h"
+
 #include "MineSweeper3D.h"
 #include "HallsOfFameDlg.h"
+
 #include "vars.h"
 
 
@@ -14,7 +15,7 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-extern	"C" GLOBAL_VARS vars;
+extern	GLOBAL_VARS vars;
 
 /////////////////////////////////////////////////////////////////////////////
 // CHallsOfFameDlg dialog

@@ -1,19 +1,21 @@
 
 
-#include "stdafx2.h"
+// WINDOWS SPECIFIC & OPENGL!!
+#include "stdafx.h"
+
 #include "library.h"
 #include "vars.h"
 #include "modules.h"
-#include "resource.h"
+#include "strings.h"
+
 
 static char * varsFile = "3dmine.cfg";
 struct GLOBAL_VARS vars;
+struct INI_VARS ini;
+
 
 extern struct	MINE_MODULE_MAPDESC * mapDescriptorList;
-extern struct	MINE_MODULE_GAMEDESC * gameDescriptorList ;
-
-
-struct	RECORD *	recordArray;
+RECORD *	recordArray;
 
 
 
@@ -22,7 +24,6 @@ static void	DefaultSettings ()
 	vars.filtering = 1;
 	vars.nMapModules = 0;
 	vars.records = NULL;
-	strcpy (vars.gameSelected, STANDARD_GAME);
 }
 
 
@@ -33,7 +34,6 @@ static	int	find (const char * const name)
 	for (i = 0; i < vars.nMapModules; i++)
 		if (strcmp (name, vars.records[i].moduleName) == 0)
 			return 1;
-
 	return 0;
 }
 
@@ -58,12 +58,14 @@ char * getDate (UINT date)
 	return buffer;
 }
 
+
+
 static DWORD UpdateSettings ()
 {
 // Va creata e modificata la lista delle mappe con i relativi record (in caso non c'è da
 // file, creare ogni record).
-	struct MINE_MODULE_MAPDESC * map;
-	struct MINE_VARS_MAPRECORD * newarray;
+	MINE_MODULE_MAPDESC * map;
+	MINE_VARS_MAPRECORD * newarray;
 	unsigned int count = vars.nMapModules, i, j;
 
 	// Moduli mappa
@@ -74,7 +76,7 @@ static DWORD UpdateSettings ()
 		map = map->next;
 	}
 
-	newarray = (struct MINE_VARS_MAPRECORD*) malloc (sizeof (struct MINE_VARS_MAPRECORD) * count);
+	newarray = new MINE_VARS_MAPRECORD [count];
 	memcpy (newarray, vars.records, sizeof (struct MINE_VARS_MAPRECORD) * vars.nMapModules);
 
 	// Ora scrive le nuove del gioco corrente, creandole e azzerandole
@@ -84,7 +86,7 @@ static DWORD UpdateSettings ()
 		if (!find(map->moduleName)) {
 			strcpy (newarray[i].moduleName, map->moduleName);
 			newarray[i].nMaps = map->nMaps;
-			newarray[i].records = (struct RECORD*) malloc (sizeof (struct RECORD) * map->nMaps);
+			newarray[i].records = new RECORD [map->nMaps];
 			for (j = 0; j < map->nMaps; j++) {
 				strncpy (newarray[i].records[j].mapName, map->mapDesc[j].name, MINE_MODULE_NAMESIZE);
 				strcpy (newarray[i].records[j].name, "Anonymous");
@@ -96,7 +98,7 @@ static DWORD UpdateSettings ()
 		map = map->next;
 	}
 	// Distrugge vecchio array, ma non i sottoarray...!!!
-	free (vars.records);
+	delete vars.records;
 	vars.records = newarray;
 	vars.nMapModules = count;
 
@@ -146,7 +148,7 @@ static int OpenSettings()
 		return 0;
 		
 	// C'è da leggere la lista delle mappe con i record
-	vars.records = (struct MINE_VARS_MAPRECORD*)malloc(sizeof (struct MINE_VARS_MAPRECORD) * vars.nMapModules);
+	vars.records = new MINE_VARS_MAPRECORD [vars.nMapModules];
 	if (fread (vars.records, sizeof (struct MINE_VARS_MAPRECORD), vars.nMapModules, file) != (UINT)vars.nMapModules) {
 		free (vars.records);
 		vars.records = NULL;
@@ -154,7 +156,7 @@ static int OpenSettings()
 	}
 
 	for (i=0; i<vars.nMapModules; i++) {
-		vars.records[i].records = (struct RECORD*) malloc (sizeof (struct RECORD) * vars.records[i].nMaps);
+		vars.records[i].records = new RECORD [vars.records[i].nMaps];
 		if (fread (vars.records[i].records, sizeof(struct RECORD), vars.records[i].nMaps, file) != (UINT)vars.records[i].nMaps)
 			break;
 
@@ -167,13 +169,14 @@ static int OpenSettings()
 
 	if (i < vars.nMapModules) {
 		for (j = 0; j < i; j++)
-			free (vars.records[j].records);
-		free (vars.records);
+			delete vars.records[j].records;
+		delete vars.records;
 		vars.records = NULL;
 		return 0;
 	}
 
 	fclose (file);
+
 	return 1;
 }
 
@@ -223,9 +226,9 @@ DWORD   StoreSettings ()
 
 		if (fwrite (vars.records[i].records, sizeof(struct RECORD), vars.records[i].nMaps, file) != (UINT)vars.records[i].nMaps)
 			return IDS_MAIN_STORESETTINGS;
-		free (vars.records[i].records);
+		delete vars.records[i].records;
 	}
-	free (vars.records);
+	delete vars.records;
 	vars.records = NULL;
 	fclose (file);
 

@@ -69,8 +69,6 @@ private:
 	void OnOK();
 
 	void UpdateMapMenu();
-	void UpdateGameMenu();
-	void UpdateGraphMenu();
 	
 	bool poll;
 	void NewGame(DWORD map);
@@ -90,6 +88,9 @@ private:
 	int my;
 	int mx;
 	void ButtonDown (DWORD button, UINT nFlags, CPoint point);
+	DWORD	activeMap;
+	int		winner;
+	DWORD	mapCodeProgressive;
 
 	bool	mapReady;
 };

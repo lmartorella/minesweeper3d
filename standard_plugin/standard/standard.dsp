@@ -98,15 +98,7 @@ PostBuild_Cmds=copy debug\*.dll ..\..\plugins
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\game.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\map.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\opengl.cpp
 # End Source File
 # Begin Source File
 

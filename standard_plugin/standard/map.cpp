@@ -31,12 +31,11 @@ void	GetMineInfo (int * versione, struct MINE_MODULE_INFO * m)
 
 void	GetMapCount (int * count)
 {
-	*count = 4;			
+	*count = 3;			
 }
 
 
-static char  names[4][32] = {  "Cube", 
-							    "2-Icosahedron (80)", 
+static char  names[3][32] = {   "2-Icosahedron (80)", 
 							    "3-Icosahedron (320)", 
 								"4-Icosahedron (1280)" };
 
@@ -328,37 +327,15 @@ void subdivide(int index, int *lastVertex, int *lastTriangle, int *lastSide)
 
 
 
-static int mines [4] = { 1, 8, 32, 128 };
+static int mines [3] = { 8, 32, 128 };
 
 
-static struct MINESWEEPER_VERTEX cubeVertexes [8] = 
-{ 
-	{ 0, 0, 0 },
-	{ 1, 0, 0 },
-	{ 1, 1, 0 },
-	{ 0, 1, 0 },
-	{ 0, 1, 1 },
-	{ 0, 0, 1 },
-	{ 1, 0, 1 },
-	{ 1, 1, 1 } 
-};
-
-static struct MINESWEEPER_FACE cubeFaces [6] =
-{
-	{ 0, 1, 2, 3, -1 },
-	{ 0, 5, 6, 1, -1 },
-	{ 0, 3, 4, 5, -1 },
-	{ 4, 3, 2, 7, -1 },
-	{ 2, 1, 6, 7, -1 },
-	{ 4, 7, 6, 5, -1 }
-};
-		
 
 void	BuildMap (int number, struct MINESWEEPER_MAP * map)
 {
 	int i, j;
 
-	if (number != 0) {
+	number++;
 		initialize();
 
 		for (j=0; j<number; j++) {
@@ -398,15 +375,8 @@ void	BuildMap (int number, struct MINESWEEPER_MAP * map)
 				map->face[i].v[j] = -1;
 		}
 		deleteArrayAct();
-	}
-	else {
-		map->nPlaces = 6;
-		map->nVertexes = 8;
-		map->vertex = cubeVertexes;
-		map->face = cubeFaces;
-	}
 
-	map->initialMines = mines[number]; 
+	map->initialMines = mines[number-1]; 
 }
 
 
