@@ -1,6 +1,6 @@
 
 
-extern void mouseButton (UINT, int, int);
+extern BOOL mouseButton (UINT, int, int);
 extern BOOL mouseMove(int state, int dx, int dy);
 extern void changeWindowSize(int width, int height);
 

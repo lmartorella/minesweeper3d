@@ -233,6 +233,13 @@ void	freeTextures()
 
 
 
+
+
+
+
+
+
+
 // ------------------------------------------------------- OBJECTS
 // ------------------------------------------------------- OBJECTS
 // ------------------------------------------------------- OBJECTS
@@ -373,6 +380,149 @@ void	freeMap ()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ------------------------------------------------------- HITS
+// ------------------------------------------------------- HITS
+// ------------------------------------------------------- HITS
+// ------------------------------------------------------- HITS
+
+#define MAX_HITBUFSIZE 512
+
+void		selectFace (int x, int y)
+{
+	int i, j, p, hit, c;
+	static GLuint selectBuf[MAX_HITBUFSIZE];
+    GLint hits;
+	GLuint z;
+	static char buffer[20];
+
+    glSelectBuffer (MAX_HITBUFSIZE, selectBuf);
+    glRenderMode (GL_SELECT);
+
+    glInitNames();
+    glPushName(0);
+
+    glMatrixMode (GL_PROJECTION);
+	glPushMatrix();
+    glLoadIdentity ();
+    gluPickMatrix ((GLdouble) x, (GLdouble) (screenViewport[3] - y),
+                    5.0, 5.0, screenViewport);
+    gluPerspective(60.0, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
+
+    glMatrixMode (GL_MODELVIEW);
+	glPushMatrix();
+    glLoadIdentity();
+    glTranslatef(0.0f, 0.0f, -3.6f);
+
+    glRotatef(rot[0], 1.0f, 0.0f, 0.0f);
+    glRotatef(rot[1], 0.0f, 1.0f, 0.0f);
+
+	p = 0;
+	if (mapPoly.nTri > 0) {
+		for (i = 0; i < mapPoly.nTri; i++) {
+			glLoadName (mapPoly.triIdx[i]);
+			glBegin (GL_TRIANGLES);
+			glVertex3fv (mapPoly.triV + p);
+			glVertex3fv (mapPoly.triV + p + 3);
+			glVertex3fv (mapPoly.triV + p + 6);
+			glEnd();
+			p += 9;
+		}
+	}
+
+	p = 0;
+	for (i = 0; i < mapPoly.nOthers; i++) {
+		glLoadName (mapPoly.othersIdx[i]);
+		glBegin (GL_POLYGON);
+		for (j = 0; j < mapPoly.othersNVx[i]; j++) {
+			glVertex3fv (mapPoly.othersV + p);
+			p += 3;
+		}
+		glEnd();
+	}
+	
+	glPopMatrix();
+    glMatrixMode (GL_PROJECTION);
+	glPopMatrix();
+    glMatrixMode (GL_MODELVIEW);
+
+	glFlush ();
+    hits = glRenderMode (GL_RENDER);
+
+	// Processa gli hits
+	p = 0;
+	z = (GLuint)-1;
+	hit = -1;
+	c = 0;
+	for (i = 0; i < hits; i++) {
+		if (selectBuf[p] != 1) {
+		    MessageBox(NULL, "Selection stack error", "Error", MB_OK);
+			p += 3 + selectBuf[p];
+			continue;
+		}
+		if (selectBuf[p+1] < z)
+			z = selectBuf[p+1], hit = (int)selectBuf[p+3], c = 0;
+		else if (selectBuf[p+1] == z)
+			c++;
+		p += 4;
+	}
+
+	if (c == 0)
+		itoa (hit, message, 10);
+	else
+		strcpy (message, "NO");
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ------------------------------------------------------- GL
 // ------------------------------------------------------- GL
 // ------------------------------------------------------- GL
@@ -435,8 +585,17 @@ void	normalViewMode()
 }
 
 
-void	mouseButton (UINT msg, int x, int y)
+BOOL	mouseButton (UINT msg, int x, int y)
 {
+	if (msg == WM_LBUTTONDOWN) {
+		selectFace (x, y);
+		return TRUE;
+	}
+	if (msg == WM_RBUTTONDOWN) {
+		normalViewMode();
+		return TRUE;
+	}
+	return FALSE;
 }
 
 
@@ -458,16 +617,11 @@ BOOL	mouseMove(int state, int dx, int dy)
 
 void	changeWindowSize(int width, int height)
 {
-	char buffer[20];
 	screenViewport[2] = width;
 	screenViewport[3] = height;
 
     glViewport(0, 0, (GLsizei) width, (GLsizei) height);
 	normalViewMode();
-	itoa (width, message, 10);
-	itoa (height, buffer, 10);
-	strcat (message, " ");
-	strcat (message, buffer);
 }
 
 
@@ -499,7 +653,7 @@ void	updateDisplay()
 	p = 0;
 	if (mapPoly.nTri > 0) {
 		for (i = 0; i < mapPoly.nTri; i++) {
-			glBindTexture(GL_TEXTURE_2D, texName[rand() % texColumns]);
+			glBindTexture(GL_TEXTURE_2D, mapPoly.triIdx[i] % texColumns);
 			glBegin (GL_TRIANGLES);
 			glTexCoord2f (0,0);
 			glVertex3fv (mapPoly.triV + p);
@@ -514,7 +668,7 @@ void	updateDisplay()
 
 	p = 0;
 	for (i = 0; i < mapPoly.nOthers; i++) {
-		glBindTexture(GL_TEXTURE_2D, texName[rand() % texColumns]);
+		glBindTexture(GL_TEXTURE_2D, texName[rand() % 3]);
 		glBegin (GL_POLYGON);
 		for (j = 0; j < mapPoly.othersNVx[i]; j++) {
 			glColor3f ((float)rand() / RAND_MAX, (float)rand() / RAND_MAX, (float)rand() / RAND_MAX);

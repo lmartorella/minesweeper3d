@@ -51,7 +51,8 @@ WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		    mouseButtonState |= 1;
 		if (uMsg == WM_RBUTTONDOWN)
 		    mouseButtonState |= 2;
-		mouseButton (uMsg, (short)(LOWORD(lParam)), (short)(HIWORD(lParam)));
+		if (mouseButton (uMsg, (short)(LOWORD(lParam)), (short)(HIWORD(lParam))))
+			PostMessage(hWnd, WM_PAINT, 0, 0);
 		return 0;
 
     case WM_LBUTTONUP:
@@ -59,7 +60,8 @@ WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	/* remember to release the capture when we are finished. */
 		ReleaseCapture();
 		mouseButtonState = 0;
-		mouseButton (uMsg, (short)(LOWORD(lParam)), (short)(HIWORD(lParam)));
+		if (mouseButton (uMsg, (short)(LOWORD(lParam)), (short)(HIWORD(lParam))))
+			PostMessage(hWnd, WM_PAINT, 0, 0);
 		return 0;
 
     case WM_MOUSEMOVE:
