@@ -3,9 +3,9 @@
 
 #ifdef __cplusplus
 extern "C" {
-	int	 mouseButton (UINT, int, int);
-	int	 mouseMove(int state, int dx, int dy);
-	void changeWindowSize(int width, int height);
+	int		mouseButton (UINT, int, int);
+	int		mouseMove(int dx, int dy);
+	void	changeWindowSize(int width, int height);
 
 	void	updateDisplay();
 
@@ -14,7 +14,7 @@ extern "C" {
 }
 #else
 	extern int	mouseButton (UINT, int, int);
-	extern int  mouseMove(int state, int dx, int dy);
+	extern int  mouseMove(int dx, int dy);
 	extern void changeWindowSize(int width, int height);
 
 	extern void	updateDisplay();

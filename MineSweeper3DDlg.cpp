@@ -203,6 +203,9 @@ bool	CMineSweeper3DDlg::PrepareOpenGL()
 /////////////////////////////////////////////////////////////////////////////
 // CMineSweeper3DDlg message handlers
 
+static bool cursorSetting = false;
+
+
 BOOL CMineSweeper3DDlg::OnInitDialog()
 {
 	CDialog::OnInitDialog();
@@ -330,6 +333,11 @@ void CMineSweeper3DDlg::OnSize(UINT nType, int cx, int cy)
 	GetClientRect (&rect);
 	changeWindowSize(rect.right, rect.bottom);
 	PostMessage(WM_PAINT, 0, 0);
+
+	cursorSetting = true;
+	
+	GetWindowRect (&rect);
+	SetCursorPos ((rect.right + rect.left) / 2, (rect.top + rect.bottom) / 2);
 }
 
 
@@ -361,7 +369,7 @@ void CMineSweeper3DDlg::ButtonDown(DWORD button, UINT nFlags, CPoint point)
 
 void CMineSweeper3DDlg::OnLButtonUp(UINT nFlags, CPoint point) 
 {
-	ButtonUp (WM_RBUTTONUP, nFlags, point);
+	ButtonUp (WM_LBUTTONUP, nFlags, point);
 	CDialog::OnLButtonUp(nFlags, point);
 }
 
@@ -384,14 +392,25 @@ void CMineSweeper3DDlg::ButtonUp(DWORD button, UINT nFlags, CPoint point)
 
 void CMineSweeper3DDlg::OnMouseMove(UINT nFlags, CPoint point) 
 {
-	if (mouseButtonState) {
-		int omx = mx;
-		int omy = my;
-		mx = point.x;
-		my = point.y;
-		if (mouseMove(mouseButtonState, omx - mx, my - omy))
-			PostMessage(WM_PAINT, 0, 0);
-	}	
+	static int x, y;
+	static CPoint p;
+
+	if (cursorSetting) {
+		GetCursorPos (&p);
+		x = p.x, y = p.y;	
+		cursorSetting = false;
+	}
+	else {
+		GetCursorPos (&p);
+		if ((x-p.x) != 0 || (y-p.y) != 0) {
+			if (mouseMove(x - p.x, y - p.y))
+				PostMessage(WM_PAINT, 0, 0);
+			else 
+				cursorSetting = true;
+			
+			SetCursorPos (x, y);
+			}
+	}
 	CDialog::OnMouseMove(nFlags, point);
 }
 

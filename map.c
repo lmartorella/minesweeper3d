@@ -68,7 +68,7 @@ int		destroyMap (struct MINESWEEPER_MAP * map)
 
 
 
-int	enumerateNEIGHBOUR (struct MINESWEEPER_MAP * map, int idx, int * buffer, int bufferSize)
+int	enumerateNeighbours (struct MINESWEEPER_MAP * map, int idx, int * buffer, int bufferSize)
 {
 	int i, j, k, t = 0, bufferOk = 1, found;
 	
@@ -107,13 +107,15 @@ int	prepareMap (struct MINESWEEPER_MAP * map, int mines)
 {
 	int i, j, c;
 
+	map->nMines = mines;
+
 	// Vicini
 	map->neighbour = (struct MINESWEEPER_NEIGHBOUR*) malloc (sizeof (struct MINESWEEPER_NEIGHBOUR) * map->nPlaces);
 	map->place = (int*) malloc (sizeof(int) * map->nPlaces);
 
 	// Setta i vicini
 	for (i = 0; i < map->nPlaces; i++) {
-		c = enumerateNEIGHBOUR (map, i, map->neighbour[i].n, MAX_NEIGHBOURS);
+		c = enumerateNeighbours (map, i, map->neighbour[i].n, MAX_NEIGHBOURS);
 		if (c > MAX_NEIGHBOURS) 
 			return 0;
 		for (j = c; j < MAX_NEIGHBOURS; j++)
@@ -139,7 +141,7 @@ int	prepareMap (struct MINESWEEPER_MAP * map, int mines)
 	}
 
 	return 1;
-}			
+}		
 
 
 
