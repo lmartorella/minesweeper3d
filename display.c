@@ -1,6 +1,6 @@
 
 
-#include "stdafx.h"
+#include "stdafx2.h"
 #include "map.h"
 
 
@@ -10,7 +10,8 @@
 			/* current rotation */
 static GLfloat rot[2] = {0.0, 0.0};
 			/* device context */
-extern HDC hDC;			
+
+HDC		hDC;			
 
 
 static 	GLuint screenViewport [4];
@@ -528,11 +529,12 @@ int		selectFace (int x, int y)
 
 
 
-BOOL	oglInit(struct MINESWEEPER_MAP * map)
+BOOL	oglInit(struct MINESWEEPER_MAP * map, HDC newhDC)
 {
 	GLint nbits[3];
 
 	mapGame = map;
+	hDC = newhDC;
 
 	// Cerca il numero di bit per colore disponibile
 	glGetIntegerv (GL_RED_BITS, nbits);

@@ -46,11 +46,23 @@ struct	MINESWEEPER_MAP {
 #define	MAP_CUBE		    2
 #define MAP_VINS			3
 
-extern BOOL buildMap (struct MINESWEEPER_MAP * map, DWORD type);
-extern BOOL preDestroyMap (struct MINESWEEPER_MAP * map);
-extern BOOL destroyMap (struct MINESWEEPER_MAP * map);
 
-extern void prepareMap (struct MINESWEEPER_MAP * map, int mines);	
-extern void	vinsFunction (struct MINESWEEPER_MAP * map);		
+#ifdef __cplusplus
+extern "C" {
+	BOOL buildMap (MINESWEEPER_MAP * map, DWORD type);
+	BOOL preDestroyMap (MINESWEEPER_MAP * map);
+	BOOL destroyMap (MINESWEEPER_MAP * map);
+
+	void prepareMap (MINESWEEPER_MAP * map, int mines);	
+	void	vinsFunction (MINESWEEPER_MAP * map);		
+}
+#else
+	extern BOOL buildMap (struct MINESWEEPER_MAP * map, DWORD type);
+	extern BOOL preDestroyMap (struct MINESWEEPER_MAP * map);
+	extern BOOL destroyMap (struct MINESWEEPER_MAP * map);
+
+	extern void prepareMap (struct MINESWEEPER_MAP * map, int mines);	
+	extern void	vinsFunction (struct MINESWEEPER_MAP * map);		
+#endif
 
 

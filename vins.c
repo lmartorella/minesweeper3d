@@ -1,6 +1,6 @@
 
 
-#include "stdafx.h"
+#include "stdafx2.h"
 #include "map.h"
 
 
