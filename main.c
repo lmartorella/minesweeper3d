@@ -250,6 +250,7 @@ WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst,
 
 	buildIcosahedron (&map);
 	//vinsFunction (&map);
+	//buildCube (&map);
 
 	if (!oglInit(map))
 		return 1;

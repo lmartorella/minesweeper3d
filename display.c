@@ -4,6 +4,8 @@
 #include "map.h"
 
 
+#define __DEBUG_MAP_
+
 
 			/* current rotation */
 static GLfloat rot[2] = {0.0, 0.0};
@@ -193,12 +195,12 @@ BOOL	buildTextures()
 						  0,
 						  GL_RGB,
 						  GL_UNSIGNED_BYTE,
-						  buffer + width * 3 * (i * (singleTexHeight + interleaveY)) +
-						           j * 3 * (singleTexWidth + interleaveX));
+			  			  buffer + width * 3 * (i * (singleTexHeight + interleaveY)) +
+			                j * 3 * (singleTexWidth + interleaveX));
 		}
 						  
 	
-	//free (buffer);
+	free (buffer);
 	return TRUE;
 }
 
@@ -273,8 +275,12 @@ BOOL	buildMap ()
 		for (j = 0; j < MAX_VERTEX_FACE; j++)
 			if (mapGame->face->v[j] == -1) break;
 		if (j < 3) {
+#ifndef __DEBUG_MAP_
 		    MessageBox(NULL, "Map definition error.", "Error", MB_OK);
 		    return FALSE;
+#else
+			continue;
+#endif
 		}
 		else if (j == 3)
 			mapPoly.nTri++;
@@ -302,6 +308,8 @@ BOOL	buildMap ()
 	for (i = 0; i < mapGame->nPlaces; i++) {
 		for (j = 0; j < MAX_VERTEX_FACE; j++)
 			if (mapGame->face->v[j] == -1) break;
+		if (j < 3)
+			continue;
 		if (j == 3) {
 			// Nuovo triangolo
 			mapPoly.triIdx[triIP++] = i; 
@@ -348,50 +356,6 @@ void	freeMap ()
 	mapPoly.triV = NULL;
 	mapPoly.triIdx = NULL;
 }
-
-
-
-static	GLuint	pickObjectListName, objectListName;
-
-void	buildLists ()
-{
-	int i, j, p = 0;
-
-	objectListName = glGenLists (1);
-	glNewList (objectListName, GL_COMPILE);
-
-	if (mapPoly.nTri > 0) {
-		glBegin (GL_TRIANGLES);
-		for (i = 0; i < mapPoly.nTri; i++) {
-			glBindTexture(GL_TEXTURE_2D, texName[2]);
-			glTexCoord2f (0,0);
-			glVertex3fv (mapPoly.triV + p);
-			glTexCoord2f (0.5,1);
-			glVertex3fv (mapPoly.triV + p + 3);
-			glTexCoord2f (1,0);
-			glVertex3fv (mapPoly.triV + p + 6);
-			p += 9;
-		}
-		glEnd();
-	}
-
-	p = 0;
-	for (i = 0; i < mapPoly.nOthers; i++) {
-		glBegin (GL_POLYGON);
-		for (j = 0; j < mapPoly.othersNVx[i]; j++) {
-			glColor3f ((float)rand() / RAND_MAX, (float)rand() / RAND_MAX, (float)rand() / RAND_MAX);
-			glVertex3fv (mapPoly.othersV + p);
-			p += 3;
-		}
-		glEnd();
-	}
-
-	glEndList();
-}
-
-
-
-
 
 
 
@@ -449,7 +413,6 @@ BOOL	oglInit(struct MINESWEEPER_MAP map)
 	if (!buildTextures())
 		return FALSE;
 
-	buildLists();
 	return TRUE;
 }
 
@@ -518,6 +481,7 @@ void	updateDisplay()
 {
 	int i, j, p;
 
+	glEnable (GL_TEXTURE_2D);
     glClearColor (0.1f, 0.2f, 0.3f, 0.0);
     if (mapGame->isConvex)
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -530,29 +494,27 @@ void	updateDisplay()
     glRotatef(rot[0], 1.0f, 0.0f, 0.0f);
     glRotatef(rot[1], 0.0f, 1.0f, 0.0f);
 
-	glEnable(GL_TEXTURE_2D);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
 	
-	
-	//glCallList (objectListName);
 	p = 0;
 	if (mapPoly.nTri > 0) {
-		glBegin (GL_TRIANGLES);
 		for (i = 0; i < mapPoly.nTri; i++) {
 			glBindTexture(GL_TEXTURE_2D, texName[rand() % texColumns]);
+			glBegin (GL_TRIANGLES);
 			glTexCoord2f (0,0);
 			glVertex3fv (mapPoly.triV + p);
 			glTexCoord2f (0.5,1);
 			glVertex3fv (mapPoly.triV + p + 3);
 			glTexCoord2f (1,0);
 			glVertex3fv (mapPoly.triV + p + 6);
+			glEnd();
 			p += 9;
 		}
-		glEnd();
 	}
 
 	p = 0;
 	for (i = 0; i < mapPoly.nOthers; i++) {
+		glBindTexture(GL_TEXTURE_2D, texName[rand() % texColumns]);
 		glBegin (GL_POLYGON);
 		for (j = 0; j < mapPoly.othersNVx[i]; j++) {
 			glColor3f ((float)rand() / RAND_MAX, (float)rand() / RAND_MAX, (float)rand() / RAND_MAX);
@@ -562,12 +524,11 @@ void	updateDisplay()
 		glEnd();
 	}
 	
-	
-	glDisable (GL_TEXTURE_2D);
-	
+
 	glPopMatrix();
 
 	/* ----------------- 2D mode ------------------ */
+	glDisable (GL_TEXTURE_2D);
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();					// salva la 3d proj.
     glLoadIdentity();
@@ -581,7 +542,7 @@ void	updateDisplay()
     glMatrixMode(GL_MODELVIEW);
 
     glFlush();
-    SwapBuffers(hDC);			/* nop if singlebuffered */
+    SwapBuffers(hDC);				/* nop if singlebuffered */
 }
 
 

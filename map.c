@@ -6,12 +6,12 @@
 
 #define X .525731112119133606f
 #define Z .850650808352039932f
-static struct MINESWEEPER_VERTEX vdata[12] = {   
+static struct MINESWEEPER_VERTEX icoVdata[12] = {   
    {-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z}, {X, 0.0, -Z},   
    {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X}, {0.0, -Z, -X},   
    {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}
 };
-static struct MINESWEEPER_FACE tindices[20] = {
+static struct MINESWEEPER_FACE icoIndices[20] = {
    {0,4,1,-1,-1,-1,-1,-1,-1,-1,-1,-1}, 
    {0,9,4,-1,-1,-1,-1,-1,-1,-1,-1,-1}, 
    {9,5,4,-1,-1,-1,-1,-1,-1,-1,-1,-1}, 
@@ -35,6 +35,19 @@ static struct MINESWEEPER_FACE tindices[20] = {
 };
 
 
+static struct MINESWEEPER_VERTEX cubeVdata[8] = {   
+   {1, 1, 1}, {-1, 1, 1}, {1, -1, 1}, {-1, -1, 1},   
+   {1, 1, -1}, {-1, 1, -1}, {1, -1, -1}, {-1, -1, -1}
+};
+static struct MINESWEEPER_FACE cubeIndices[6] = {
+   {1,0,2,3,-1,-1,-1,-1,-1,-1,-1,-1}, 
+   {5,4,0,1,-1,-1,-1,-1,-1,-1,-1,-1}, 
+   {0,4,6,2,-1,-1,-1,-1,-1,-1,-1,-1}, 
+   {4,5,7,6,-1,-1,-1,-1,-1,-1,-1,-1}, 
+   {2,6,7,3,-1,-1,-1,-1,-1,-1,-1,-1}, 
+   {1,3,7,5,-1,-1,-1,-1,-1,-1,-1,-1}, 
+};
+
 
 void	buildIcosahedron (struct MINESWEEPER_MAP * map)
 {
@@ -43,9 +56,27 @@ void	buildIcosahedron (struct MINESWEEPER_MAP * map)
 	map->isConvex = TRUE;
 	map->cullingMode = GL_CW;
 	
-	map->face = tindices;
-	map->vertex = vdata;
+	map->face = icoIndices;
+	map->vertex = icoVdata;
 	
 	map->place = NULL;
 	map->nMines = 0;
 }
+
+
+void	buildCube (struct MINESWEEPER_MAP * map)
+{
+	map->nPlaces = 6;
+	map->nVertexes = 8;
+	map->isConvex = TRUE;
+	map->cullingMode = GL_CW;
+	
+	map->face = cubeIndices;
+	map->vertex = cubeVdata;
+	
+	map->place = NULL;
+	map->nMines = 0;
+}
+
+
+

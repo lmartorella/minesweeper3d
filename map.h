@@ -44,4 +44,5 @@ struct	MINESWEEPER_MAP {
 
 extern void buildIcosahedron (struct MINESWEEPER_MAP * map);
 extern void	vinsFunction (struct MINESWEEPER_MAP * map);
+extern void buildCube (struct MINESWEEPER_MAP * map);
 
