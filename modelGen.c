@@ -1,11 +1,13 @@
 
 
 #include "stdafx2.h"
+
 #include "map.h"
 
 
 #define X .525731112119133606f
 #define Z .850650808352039932f
+
 
 
 
@@ -138,8 +140,8 @@ void aggiornaMatrix() {
 	}
 	for (i=0; i<propAct[2]; i++) {
 		lindexAct[i*3 + 0] = lindexNew[i*3 + 0];
-		lindexAct[i*3 + 1] = lindexAct[i*3 + 1];
-		lindexAct[i*3 + 2] = lindexAct[i*3 + 2];
+		lindexAct[i*3 + 1] = lindexNew[i*3 + 1];
+		lindexAct[i*3 + 2] = lindexNew[i*3 + 2];
 	}
 	/* distruggo la matrice New */
 	deleteArrayNew();
@@ -221,7 +223,7 @@ void subdivide(int index, int *lastVertex, int *lastTriangle, int *lastSide)
 					lindexNew[((*lastSide) * 3) + 1] = lindexAct[ind2 + 2];
 					lindexNew[((*lastSide) * 3) + 2] = -1;
 					(*lastSide) = (*lastSide) + 1;
-					lindexNew[((*lastSide) * 3) + 0] = lindexAct[ind2 + 0];
+					lindexNew[((*lastSide) * 3) + 0] = lindexAct[ind2 + 1];
 					lindexNew[((*lastSide) * 3) + 1] = lindexAct[ind2 + 2];
 					lindexNew[((*lastSide) * 3) + 2] = -1;
 					(*lastSide) = (*lastSide) + 1;
@@ -278,7 +280,6 @@ void subdivide(int index, int *lastVertex, int *lastTriangle, int *lastSide)
 	lindexNew[((*lastSide) * 3) + 1] = newVertex[0];
 	lindexNew[((*lastSide) * 3) + 2] = -1;
 	(*lastSide) = (*lastSide) + 1;
-
 }
 /********** Fine Creazione Nuovi Triangoli *************/
 
@@ -287,51 +288,34 @@ void subdivide(int index, int *lastVertex, int *lastTriangle, int *lastSide)
 
 
 
-void	vinsFunction (struct MINESWEEPER_MAP * map)
+void	buildN_UpIcosahedron (struct MINESWEEPER_MAP * map, int n)
 {
 	int i, j;
 
 	initialize();
 
-	/* preciclo di chiamata 80fc */
-	buildArrayNew();
-	for (i=0; i<propAct[0]; i++) {
-		vdataNew[i * 3 + 0] = vdataAct[i * 3 + 0];
-		vdataNew[i * 3 + 1] = vdataAct[i * 3 + 1];
-		vdataNew[i * 3 + 2] = vdataAct[i * 3 + 2];
+	for (j=0; j<n; j++) {
+		/* preciclo di chiamata subdivide */
+		buildArrayNew();
+		for (i=0; i<propAct[0]; i++) {
+			vdataNew[i * 3 + 0] = vdataAct[i * 3 + 0];
+			vdataNew[i * 3 + 1] = vdataAct[i * 3 + 1];
+			vdataNew[i * 3 + 2] = vdataAct[i * 3 + 2];
+		}
+		/* ciclo di chiamata subdivide */
+		propNew[0] = propAct[0];
+		propNew[1] = propAct[1];
+		propNew[2] = 0;
+		for (i = 0; i < propAct[1]; i++) 
+			subdivide(i, &propNew[0], &propNew[1], &propNew[2]);
+
+		aggiornaMatrix();
 	}
-	/* ciclo di chiamata 80fc */
-	propNew[0] = propAct[0];
-	propNew[1] = propAct[1];
-	propNew[2] = 0;
-	for (i = 0; i < propAct[1]; i++) 
-		subdivide(i, &propNew[0], &propNew[1], &propNew[2]);
 
-	aggiornaMatrix();
-
-	
-
-	/* preciclo di chiamata 320fc */
-/*	buildArrayNew();
-	for (i=0; i<propAct[0]; i++) {
-		vdataNew[i * 3 + 0] = vdataAct[i * 3 + 0];
-		vdataNew[i * 3 + 1] = vdataAct[i * 3 + 1];
-		vdataNew[i * 3 + 2] = vdataAct[i * 3 + 2];
-	}
-	/* ciclo di chiamata 320fc */
-/*	propNew[0] = propAct[0];
-	propNew[1] = propAct[1];
-	propNew[2] = 0;
-	for (i = 0; i < propAct[1]; i++) 
-		subdivide(i, &propNew[0], &propNew[1], &propNew[2]);
-
-	aggiornaMatrix();
-*/
 
 	
 	map->nPlaces = propAct[1];
 	map->nVertexes = propAct[0];
-	map->place = NULL;
 
 	map->vertex = (struct MINESWEEPER_VERTEX*) malloc (sizeof (struct MINESWEEPER_VERTEX) * propAct[0]);
 	map->face = (struct MINESWEEPER_FACE*) malloc (sizeof (struct MINESWEEPER_FACE) * propAct[1]);

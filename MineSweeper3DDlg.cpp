@@ -240,12 +240,12 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
     hRC = wglCreateContext(pDC->m_hDC);
     wglMakeCurrent(pDC->m_hDC, hRC);
 
-	if (!buildMap (&map, MAP_VINS)) {
+	if (!buildMap (&map, MAP_NUPICOSAHEDRON, 3)) {
 		AfxMessageBox ("Error building map", MB_OK);
 		exit (1);
 	}
 
-	prepareMap (&map, 10);				// mette le mine
+	prepareMap (&map, 8);				// mette le mine
 
 	if (!oglInit(&map, pDC->m_hDC))
 		exit (1);

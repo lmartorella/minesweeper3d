@@ -42,25 +42,27 @@ struct	MINESWEEPER_MAP {
 
 
 
-#define	MAP_ICOSAHEDRON		1
+#define	MAP_NUPICOSAHEDRON	1
 #define	MAP_CUBE		    2
-#define MAP_VINS			3
+
 
 
 #ifdef __cplusplus
 extern "C" {
-	int	buildMap (MINESWEEPER_MAP * map, DWORD type);
+	int	buildMap (MINESWEEPER_MAP * map, DWORD type, DWORD param);
 	int	 destroyMap (MINESWEEPER_MAP * map);
 
 	void prepareMap (MINESWEEPER_MAP * map, int mines);	
 	void	vinsFunction (MINESWEEPER_MAP * map);		
+	void	buildN_UpIcosahedron (MINESWEEPER_MAP * map, int n);
 }
 #else
-	extern int	buildMap (struct MINESWEEPER_MAP * map, DWORD type);
+	extern int	buildMap (struct MINESWEEPER_MAP * map, DWORD type, DWORD param);
 	extern int  destroyMap (struct MINESWEEPER_MAP * map);
 
 	extern void prepareMap (struct MINESWEEPER_MAP * map, int mines);	
 	extern void	vinsFunction (struct MINESWEEPER_MAP * map);		
+	extern void	buildN_UpIcosahedron (struct MINESWEEPER_MAP * map, int n);
 #endif
 
 
