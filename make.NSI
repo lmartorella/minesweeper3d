@@ -1,5 +1,5 @@
-OutFile	Installer\mine.exe
-Name "Minesweeper 3D - Version 0.61 alfa 2"
+OutFile Installer\mine.exe
+Name "Minesweeper 3D - Version 0.62 beta 1"
 Caption "Minesweeper3D setup"
 #Icon c:\work\puzzlebobble\work.ico
 WindowIcon off
@@ -45,7 +45,7 @@ Section
 #Installa i files
 SetOutPath $INSTDIR
 File Release\Minesweeper3D.exe
-File Readme.txt
+File texts\Readme.txt
 File config.txt
 SetOutPath $INSTDIR\Data
 File /r Data\*.*

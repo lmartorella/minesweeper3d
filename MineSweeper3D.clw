@@ -2,24 +2,27 @@
 
 [General Info]
 Version=1
-LastClass=CAboutDlg
-LastTemplate=CStatic
+LastClass=COptionsDlg
+LastTemplate=CDialog
 NewFileInclude1=#include "stdafx.h"
 NewFileInclude2=#include "MineSweeper3D.h"
 
-ClassCount=5
+ClassCount=7
 Class1=CMineSweeper3DApp
 Class2=CMineSweeper3DDlg
 Class3=CAboutDlg
 
-ResourceCount=5
-Resource1=IDD_ABOUTBOX
+ResourceCount=6
+Resource1=IDD_HALLSOFFAME
 Resource2=IDR_MAINFRAME
-Resource3=IDD_MINESWEEPER3D_DIALOG
-Resource4=IDD_HALLSOFFAME
+Resource3=IDD_RECORD
+Resource4=IDD_ABOUTBOX
 Class4=CHallsOfFameDlg
 Class5=CWonDlg
-Resource5=IDD_RECORD
+Resource5=IDD_MINESWEEPER3D_DIALOG
+Class6=CLanguage
+Class7=COptionsDlg
+Resource6=IDD_DIALOG1
 
 [CLS:CMineSweeper3DApp]
 Type=0
@@ -41,7 +44,7 @@ Type=0
 HeaderFile=aboutdlg.h
 ImplementationFile=aboutdlg.cpp
 BaseClass=CDialog
-LastObject=IDC_LINK
+LastObject=CAboutDlg
 Filter=D
 VirtualFilter=dWC
 
@@ -94,4 +97,33 @@ Control1=IDOK,button,1342242816
 Control2=IDCANCEL,button,1342242816
 Control3=IDC_STATIC1,static,1342308352
 Control4=IDC_EDIT1,edit,1350631552
+
+[CLS:CLanguage]
+Type=0
+HeaderFile=Language.h
+ImplementationFile=Language.cpp
+BaseClass=CDialog
+Filter=D
+VirtualFilter=dWC
+LastObject=CLanguage
+
+[DLG:IDD_DIALOG1]
+Type=1
+Class=COptionsDlg
+ControlCount=6
+Control1=IDOK,button,1342242817
+Control2=IDCANCEL,button,1342242816
+Control3=IDC_LANG_STATIC,static,1342308352
+Control4=IDC_COMBO1,combobox,1344340226
+Control5=IDC_SLIDER1,msctls_trackbar32,1342242836
+Control6=IDC_SENS_STATIC,static,1342308352
+
+[CLS:COptionsDlg]
+Type=0
+HeaderFile=OptionsDlg.h
+ImplementationFile=OptionsDlg.cpp
+BaseClass=CDialog
+Filter=D
+LastObject=COptionsDlg
+VirtualFilter=dWC
 

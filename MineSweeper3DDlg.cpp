@@ -14,8 +14,7 @@
 #include "HallsOfFameDlg.h"
 #include "WonDlg.h"
 #include "AboutDlg.h"
-
-#include <shlobj.h>
+#include "OptionsDlg.h"
 
 
 
@@ -407,8 +406,8 @@ BOOL CMineSweeper3DDlg::DestroyWindow()
 	}
 	DestroyDescriptorLists ();
 	
-	DeleteStrings();
 
+	DeleteStrings();
 	return CDialog::DestroyWindow();
 }
 
@@ -583,6 +582,16 @@ BOOL CMineSweeper3DDlg::OnCommand(WPARAM wParam, LPARAM lParam)
 	case MIDM_HELP:
 		GotoURL("help\\index.html", 1);
 		return TRUE;
+	case MIDM_OPTIONS:
+		{
+			COptionsDlg dlg;
+			dlg.DoModal();
+			if (!LoadStrings ()) {
+				AfxMessageBox ("Error in loading language\r\nErrore nel caricamento del linguaggio");
+				exit(1);
+			}
+			MINESetMenus();
+		}
 
 	default:
 		if (wParam >= ID_NEWMAP_GAME && wParam < ID_NEWMAP_GAME + MAX_MAPS_COUNT) {
@@ -827,19 +836,32 @@ void	CMineSweeper3DDlg::MINEEnableMenuItem (DWORD code, int ch)
 	EnableMenuItem (GetMenu()->m_hMenu, MF_BYCOMMAND | code, comm);
 }
 
+
+
+
+
 void	CMineSweeper3DDlg::MINESetMenus ()
 {
 	// Struttura attuale del menu
-	static CMenu menuGame;
+	static CMenu menu, menuGame, submenuGame, viewMenu, helpMenu;
+	menuGame.DestroyMenu();
 	menuGame.CreateMenu();
+	submenuGame.DestroyMenu();
+	submenuGame.CreateMenu();
+	menu.DestroyMenu();
+	menu.CreateMenu();
+	viewMenu.DestroyMenu();
+	viewMenu.CreateMenu();
+	helpMenu.DestroyMenu();
+	helpMenu.CreateMenu();
+
+
 	menuGame.InsertMenu (-1, MF_BYPOSITION | MF_STRING | MF_GRAYED, 
 						    MIDM_RESTART_GAME, 
 							GetString (MIDM_RESTART_GAME));
 
 
 	// Menu mappe
-	static CMenu submenuGame;
-	submenuGame.CreateMenu();
 	MINE_MODULE_MAPDESC * p = mapDescriptorList;
 	while (p != NULL) { 
 		for (unsigned int i = 0; i < p->nMaps; i++)
@@ -855,18 +877,17 @@ void	CMineSweeper3DDlg::MINESetMenus ()
 						    (DWORD)submenuGame.m_hMenu, 
 							GetString (MIDM_NEW_GAME));
 	menuGame.InsertMenu (-1, MF_BYPOSITION | MF_SEPARATOR);
+	menuGame.InsertMenu (-1, MF_BYPOSITION | MF_STRING, MIDM_OPTIONS,
+							GetString (MIDM_OPTIONS));
+	menuGame.InsertMenu (-1, MF_BYPOSITION | MF_SEPARATOR);
 	menuGame.InsertMenu (-1, MF_BYPOSITION | MF_STRING, 
 						    MIDM_EXIT, 
 							GetString (MIDM_EXIT));
 
-	static CMenu menu;
-	menu.CreateMenu();
 	menu.InsertMenu		(-1, MF_BYPOSITION | MF_STRING | MF_POPUP, 
 						    DWORD(menuGame.m_hMenu), 
 							GetString (MIDM_GAME));
 
-	static CMenu viewMenu;
-	viewMenu.CreateMenu();
 	viewMenu.InsertMenu (-1, MF_BYPOSITION | MF_STRING,
 							MIDM_HALLSOFFAME,
 							GetString(MIDM_HALLSOFFAME));
@@ -874,8 +895,6 @@ void	CMineSweeper3DDlg::MINESetMenus ()
 						    DWORD(viewMenu.m_hMenu), 
 							GetString (MIDM_VIEW));
 
-	static CMenu helpMenu;
-	helpMenu.CreateMenu();
 	helpMenu.InsertMenu (-1, MF_BYPOSITION | MF_STRING,
 							MIDM_HELP,
 							GetString(MIDM_HELP));

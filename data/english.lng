@@ -28,6 +28,10 @@ IDS_WINDLG_TITLE=You win!
 IDS_WINDLG_MESSAGE=Insert your name:
 IDS_HALLSOFFAME_TITLE=Halls of fame
 
+IDS_OPTIONDLG=Options settings
+IDS_LANGUAGE=Language:
+IDS_SENS=Sensitivity:
+
 IDS_HOF_MAPNAME=Map name
 IDS_HOF_SWEEPERNAME=Sweeper
 IDS_HOF_TIME=Time
@@ -41,4 +45,6 @@ IDM_VIEW=&View
 IDM_HALLSOFFAME=&Halls of fame...
 IDM_HELP=&Help
 IDM_ABOUT=&About...
+IDM_OPTIONS=&Options...
+
 

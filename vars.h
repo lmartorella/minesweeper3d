@@ -75,6 +75,7 @@ struct	INI_VARS {
 	RECORD	*	GetRecordArray (const char * const moduleName, int mapIdx);
 
 	DWORD	LoadINI(char * name);
+	DWORD	SaveINI(char * name);
 
 
 #endif

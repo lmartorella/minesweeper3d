@@ -1,0 +1,10 @@
+
+Settaggi del config (globali, default) salvabili in un altro file (locale, editabile).
+
+Dialog dei settaggi più comuni
+
+Tasti [zoom, fov]
+
+Map infos in dialog
+
+

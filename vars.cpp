@@ -68,7 +68,7 @@ DWORD		LoadINI(char * extname)
 	ini.graph_filtering = 1;			
 	ini.graph_bpptexture = 16;
 
-	strcpy (ini.main_language, "english.lng");
+	strcpy (ini.main_language, "english");
 	ini.main_xSens = ini.main_ySens = 1.0f;
 	
 	// Perf
@@ -134,8 +134,61 @@ DWORD		LoadINI(char * extname)
 			sscanf (string, "%f %f %f %f", array, array + 1, array + 2, array + 3);
 		}
 	}
+	fclose (file);
 	return 0;
 }	
+
+
+
+
+DWORD		SaveINI (char * extname)
+{
+	char newName[128];
+	strcpy (newName, iniFile);
+	strcat (newName, "2");
+	FILE * i = fopen (iniFile, "rt");
+	FILE * o = fopen (newName, "wt");
+	if (!i || !o)
+		return MIDS_MAIN_STORESETTINGS;
+
+	char name [128], string [128];
+	while (ReadAssignment (name, string, 128, i, o)) {
+		// Cerca nome
+		int idx = 0;
+		while (nametable[idx].var != NULL && strcmp (name, nametable[idx].name) != 0)
+			idx++;
+		if (nametable[idx].var == NULL) {
+			strcpy (extname, name);
+			return MIDS_VARS_UNKNOWNVAR;
+		}
+
+		fprintf (o, "%s = ", name);
+		if (nametable[idx].type == TSTRING) 
+			fprintf (o, "%s\n", nametable[idx].var);
+		else if (nametable[idx].type == TINT) 
+			fprintf (o, "%d\n", *((int*)nametable[idx].var));
+		else if (nametable[idx].type == GLFLOAT) 
+			fprintf (o, "%f\n", *((GLfloat*)nametable[idx].var));
+		else if (nametable[idx].type == GLFLOAT4) {
+			GLfloat * array = (GLfloat*)nametable[idx].var;
+			fprintf (o, "%f %f %f %f\n", array, array + 1, array + 2, array + 3);
+		}
+	}
+	fclose (o);
+	fclose (i);
+
+	// Cancella il vecchio file.
+	if (DeleteFile (iniFile))
+		MoveFile (newName, iniFile);
+
+
+	return 0;
+}
+
+
+
+
+
 
 
 

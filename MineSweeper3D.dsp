@@ -122,6 +122,10 @@ SOURCE=.\modules.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\OptionsDlg.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\StdAfx.cpp
 # ADD CPP /Yc"stdafx.h"
 # End Source File
@@ -180,6 +184,10 @@ SOURCE=.\modules.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\OptionsDlg.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\Resource.h
 # End Source File
 # Begin Source File
@@ -233,15 +241,23 @@ SOURCE=.\data\italian.lng
 # End Group
 # Begin Source File
 
-SOURCE=.\alfatesting.txt
+SOURCE=.\texts\alfatesting.txt
 # End Source File
 # Begin Source File
 
-SOURCE=.\libraries.txt
+SOURCE=.\texts\alfatesting2.txt
 # End Source File
 # Begin Source File
 
-SOURCE=.\ReadMe.txt
+SOURCE=.\texts\library.txt
+# End Source File
+# Begin Source File
+
+SOURCE=.\texts\ReadMe.txt
+# End Source File
+# Begin Source File
+
+SOURCE=.\texts\todo.txt
 # End Source File
 # Begin Source File
 

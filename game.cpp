@@ -539,7 +539,6 @@ static void	prepareMap ()
 
 	// Ora setta i numeri
 	placeNumbers();
-
 }		
 
 

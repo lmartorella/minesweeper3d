@@ -1,10 +1,15 @@
-MineSweeper 3D  V.0.61 - (C) Noinet Corp.
-	        16/03/2002
+MineSweeper 3D  V.0.62 - (C) Noinet Corp.
+	        28/06/2002
 
  - - - Free Distribution - - -
 
 Please report bug/suggestion at noinetcorp@tiscali.it
-http://web.tiscali.it/noinetcorp
+http://web.tiscali.it/noinet
+
+
+New in 0.62 beta1        [28/06/02]:
+* Fixed minor bugs
+* Option minidialog
 
 
 New in 0.61 alfa2        [16/03/02]:

@@ -28,6 +28,10 @@ IDS_WINDLG_TITLE=Hai vinto!
 IDS_WINDLG_MESSAGE=Inserisci il tuo nome:
 IDS_HALLSOFFAME_TITLE=Sala dei più famosi
 
+IDS_OPTIONDLG=Opzioni
+IDS_LANGUAGE=Lingua:
+IDS_SENS=Sensibilità:
+
 IDS_HOF_MAPNAME=Nome mappa
 IDS_HOF_SWEEPERNAME=Vincitore
 IDS_HOF_TIME=Tempo
@@ -41,5 +45,6 @@ IDM_VIEW=&Visualizza
 IDM_HALLSOFFAME=&Record...
 IDM_HELP=&Aiuto
 IDM_ABOUT=&Informazioni...
+IDM_OPTIONS=&Opzioni...
 
 

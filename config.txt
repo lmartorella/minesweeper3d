@@ -11,13 +11,13 @@
 	# Language-selection. See directory data\ for
 	# files (.lng). All strings defined are mandatory for
 	# successful game loading. Default is "english.lng"
-main_language = italian.lng
+main_language = english
 
 
 	# Sensitivity for mouse input
 	# Standard and default values are 1.0
-main_xSens = 3.0
-main_ySens = 3.0 
+main_xSens = 2.000
+main_ySens = 2.000
 
 
 	
@@ -39,8 +39,8 @@ tex_file = textures.raw
 	# Indicate width and height for a single texture, in pixel. 
 	# See OpenGL specification for admitted sizes (2^n). Default is
 	# 32x32 textures
-tex_width =32
-tex_height =32
+tex_width = 32
+tex_height = 32
 
 	# Texture horizontal interleave
 	# Define pixel size of interleave (rows) in image.
@@ -100,7 +100,7 @@ graph_bpptexture = 32
 
 	# Shininess for button borders and face. (default 30.0, both)
 #light_borderShininess = 100.0
-light_faceShininess = 100.0
+light_faceShininess = 100.000000
 
 	# Button border diffusion and specularity (RGBA)
 	# (default: diffusion[.4, .4, .4, .4]		gray

@@ -50,7 +50,12 @@
 #define	MIDS_HOF_TIME					1139
 #define	MIDS_HOF_DATE					1140
 
-#define	IDS____LAST						1141
+#define	MIDM_OPTIONS					1141
+#define MIDS_OPTIONDLG					1142
+#define MIDS_LANGUAGE					1143
+#define MIDS_SENS						1144
+
+#define	IDS____LAST						1145
 
 
 
@@ -68,6 +73,7 @@ void				DeleteStrings ();
 int					ReadAssignment (char * name, 
 									char * string, 
 									int size, 
-									FILE * file);
+									FILE * file,
+									FILE * out = NULL);
 
 #endif

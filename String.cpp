@@ -51,7 +51,11 @@ StringResource stable [] = {
 	{ MIDM_VIEW						, "IDM_VIEW"						},
 	{ MIDM_HALLSOFFAME				, "IDM_HALLSOFFAME"					},
 	{ MIDM_HELP						, "IDM_HELP"						},
-	{ MIDM_ABOUT						, "IDM_ABOUT"						},
+	{ MIDM_ABOUT					, "IDM_ABOUT"						},
+	{ MIDM_OPTIONS					, "IDM_OPTIONS"						},
+	{ MIDS_OPTIONDLG				, "IDS_OPTIONDLG"					},
+	{ MIDS_LANGUAGE					, "IDS_LANGUAGE"					},
+	{ MIDS_SENS						, "IDS_SENS"						},
 	
 	{ MIDS_ABOUT_TITLE			,	"IDS_ABOUT_TITLE"	},
 	{ MIDS_HALLSOFFAME_TITLE	,	"IDS_HALLSOFFAME_TITLE" },
@@ -74,7 +78,7 @@ StringResource stable [] = {
 
 
 
-int		ReadAssignment (char * name, char * string, int size, FILE * file)
+int		ReadAssignment (char * name, char * string, int size, FILE * file, FILE * out)
 {
 	char * buffer = new char[size];
 
@@ -102,10 +106,11 @@ int		ReadAssignment (char * name, char * string, int size, FILE * file)
 		
 		// Decode
 		char temp[128];
-		if (sscanf (buffer, "%128s", temp) < 1)
+		if (sscanf (buffer, "%128s", temp) < 1 || temp[0] == '#' || temp[0] == '=') {
+			if (out)
+				fprintf (out, "%s\n", buffer);
 			continue;
-		if (temp[0] == '#' || temp[0] == '=')
-			continue;
+		}
 
 		char * eq = strchr (buffer, '=');
 		char * eq2 = eq;
@@ -188,7 +193,7 @@ int		ReadStringDef (DWORD * code, char * string, int size, FILE * file)
 
 
 #define NUM (IDS____LAST - IDS____FIRST - 1)
-const char * about = "MineSweeper 3D - Version 0.61";
+const char * about = "MineSweeper 3D - Version 0.62 beta1";
 
 StringResource strings [NUM];
 
@@ -229,6 +234,7 @@ int			LoadStrings ()
 	char filename2[128];
 	strcpy (filename2, DATA_DIRECTORY);
 	strcat (filename2, ini.main_language);
+	strcat (filename2, ".lng");
 	FILE * file = fopen (filename2, "rt");
 	if (file == NULL)
 		return 0;
