@@ -3,14 +3,14 @@
 
 #ifdef __cplusplus
 extern "C" {
-	int		mouseButton (UINT, int, int);
+	int		mouseButton (UINT, int, int, int * unlock);
 	int		mouseMove(int dx, int dy);
 	void	changeWindowSize(int width, int height);
 
 	void	updateDisplay();
 
-	int		gameInit(struct MINESWEEPER_MAP * map);
-	void	gameClose();
+	int		gameInit(int rebuild);
+	void	gameClose(int destroy);
 
 	int		oglInit ();
 	void	oglClose ();
@@ -21,14 +21,14 @@ extern "C" {
 	void	timerSet(int t);
 }
 #else
-	extern int	mouseButton (UINT, int, int);
+	extern int	mouseButton (UINT, int, int, int * unlock);
 	extern int  mouseMove(int dx, int dy);
 	extern void changeWindowSize(int width, int height);
 
 	extern void	updateDisplay();
 
-	extern int 	gameInit(struct MINESWEEPER_MAP * map, HDC hDC);
-	extern void	gameClose();
+	extern int 	gameInit(int rebuild);
+	extern void	gameClose(int destroy);
 
 	extern int	oglInit ();
 	extern void	oglClose ();

@@ -40,9 +40,10 @@ RSC=rc.exe
 # PROP Use_Debug_Libraries 0
 # PROP Output_Dir "Release"
 # PROP Intermediate_Dir "Release"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /Yu"stdafx.h" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_AFXDLL" /Yu"stdafx2.h" /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x410 /d "NDEBUG" /d "_AFXDLL"
@@ -53,6 +54,7 @@ BSC32=bscmake.exe
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /machine:I386
 # ADD LINK32 /nologo /subsystem:windows /machine:I386
+# SUBTRACT LINK32 /profile /nodefaultlib
 
 !ELSEIF  "$(CFG)" == "MineSweeper3D - Win32 Debug"
 
@@ -67,7 +69,7 @@ LINK32=link.exe
 # PROP Intermediate_Dir "Debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /Yu"stdafx.h" /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /Yu"stdafx.h" /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_AFXDLL" /D "_MBCS" /Yu"stdafx2.h" /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x410 /d "_DEBUG" /d "_AFXDLL"
@@ -90,8 +92,16 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\display.c
-# ADD CPP /Yu"stdafx2.h"
+SOURCE=.\game.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\HallsOfFameDlg.cpp
+# SUBTRACT CPP /YX /Yc /Yu
+# End Source File
+# Begin Source File
+
+SOURCE=.\icosah.c
 # End Source File
 # Begin Source File
 
@@ -105,13 +115,17 @@ SOURCE=.\MineSweeper3DDlg.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\modelGen.c
-# ADD CPP /Yu"stdafx2.h"
+SOURCE=.\StdAfx2.c
+# ADD CPP /Yc"stdafx2.h"
 # End Source File
 # Begin Source File
 
-SOURCE=.\StdAfx2.c
-# ADD CPP /Yc"stdafx2.h"
+SOURCE=.\vars.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\WonDlg.cpp
+# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -124,6 +138,10 @@ SOURCE="..\..\..\Programmi\Microsoft Visual Studio\VC98\Include\BASETSD.H"
 # Begin Source File
 
 SOURCE=.\display.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\HallsOfFameDlg.h
 # End Source File
 # Begin Source File
 
@@ -148,6 +166,14 @@ SOURCE=.\StdAfx.h
 # Begin Source File
 
 SOURCE=.\stdafx2.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\vars.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\WonDlg.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"

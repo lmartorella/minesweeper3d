@@ -29,7 +29,7 @@ struct	MINESWEEPER_NEIGHBOUR {
 struct	MINESWEEPER_MAP {
 
 	// Discriminante
-		DWORD	type;
+		DWORD	typeIndex;
 
 	// Geometria
 		int		nPlaces;
@@ -46,32 +46,42 @@ struct	MINESWEEPER_MAP {
 	// Gioco
 		int *	place;		// piazzole. -1 se c'è mina
 		int		nMines;
+		int		nTotalMines;
 		int		nChecked;
 };
 
 
 
-#define MAP_NULL			0
+#define MAP_NULL			-1
 #define	MAP_NUPICOSAHEDRON	1
 #define	MAP_CUBE		    2
+
+#define NUMMAPTYPE 4
+
+struct MINESWEEPER_MAPTYPE {
+	DWORD	commandType;
+	int		mines;
+
+	DWORD	type;
+	DWORD	param;
+}; 
+
 
 
 
 #ifdef __cplusplus
 extern "C" {
-	int		buildMap (MINESWEEPER_MAP * map, DWORD type, DWORD param);
-	int		destroyMap (MINESWEEPER_MAP * map);
+	int		buildMap (DWORD typeIdx);
+	int		destroyMap ();
 
-	int		prepareMap (MINESWEEPER_MAP * map, int mines);	
-	void	vinsFunction (MINESWEEPER_MAP * map);		
+	int		prepareMap (int mines, int rebuild);	
 	void	buildN_UpIcosahedron (MINESWEEPER_MAP * map, int n);
 }
 #else
-	extern int	buildMap (struct MINESWEEPER_MAP * map, DWORD type, DWORD param);
-	extern int  destroyMap (struct MINESWEEPER_MAP * map);
+	extern int	buildMap (DWORD typeIdx);
+	extern int  destroyMap ();
 
-	extern int  prepareMap (struct MINESWEEPER_MAP * map, int mines);	
-	extern void	vinsFunction (struct MINESWEEPER_MAP * map);		
+	extern int  prepareMap (int mines, int rebuild);	
 	extern void	buildN_UpIcosahedron (struct MINESWEEPER_MAP * map, int n);
 #endif
 

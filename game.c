@@ -2,11 +2,10 @@
 
 #include "stdafx2.h"
 #include "map.h"
+#include "vars.h"
 
 
-#undef __DEBUG_MAP_				// Evita l'errore "too few vertices for place"
-
-
+#undef __DEBUG_MAP_				// Abilita l'errore "too few vertices for place"
 
 
 
@@ -15,21 +14,23 @@ static 	GLuint screenViewport [4];
 
 /* FONT */
 static GLuint fontOffset;
+#define CROSSHAIR 2
 
 /* FILE IMAGE */
-static char texFileName[] = "bitlist.raw";
-static int singleTexWidth = 16, singleTexHeight = 16;
-static int interleaveX = 1, interleaveY = 0;
-static int texRows = 1, texColumns = 12;
+static char texFileName[] = "textures.raw";
+static int singleTexWidth = 32, singleTexHeight = 32;
+static int interleaveX = 1, interleaveY = 1;
+static int texRows = 1, texColumns = 15;
 
 /* Texture Object */
-#define TEX_FLAG 0
-#define TEX_MINE 1
-#define TEX_NUMBASE 2
+#define TEX_FLAG 1
+#define TEX_MINE 0
+#define TEX_NUMBASE 1
 static GLuint * texName = NULL;
+static GLfloat * texVertex = NULL;
 
 /* Mappa */
-static	struct MINESWEEPER_MAP	* mapGame;
+extern 	struct MINESWEEPER_MAP map;
 struct	MAP_POLY {
 		// Numero di triangoli
 		int		nTri;
@@ -61,6 +62,7 @@ static int gamePaused = 0;
 static int game = 0;
 static int time = 0;
 static int ended = 0;
+	   int youWin = 0, youLose = 0, youWinRecord = 0;
 static GLfloat rot[16] = {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
 
 /* OPENGL */
@@ -70,7 +72,7 @@ static GLfloat rot[16] = {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
 #define FOV    32.0f		
 
 
-
+extern struct GLOBAL_VARS vars;
 
 
 
@@ -83,6 +85,12 @@ static GLfloat rot[16] = {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
 
 GLubyte space[] =
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+GLubyte crosshair[] =
+	{ 0x08, 0x0, 0x1c, 0, 0x2a, 0, 0x41, 0, 0xeb, 0x80, 0x41, 0, 0x2a, 0, 0x1c, 0, 0x08, 0};
+GLubyte minus[] =
+    {0x00, 0x00, 0x00, 0x00, 0x00, 0x7E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
 
 GLubyte numbers[][11] = {
     {  0xfe, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0x82, 0xfe },
@@ -142,8 +150,16 @@ void makeRasterFont(void)
       glBitmap(8, 11, 0, 0, 10, 0, letters[i]);
       glEndList();
    }
+   
    glNewList(fontOffset + ' ', GL_COMPILE);
-   glBitmap(8, 13, 0.0, 2.0, 10.0, 0.0, space);
+   glBitmap(8, 11, 0, 0, 10.0, 0.0, space);
+   glEndList();
+   glNewList(fontOffset + '-', GL_COMPILE);
+   glBitmap(8, 11, 0, 0, 10.0, 0.0, minus);
+   glEndList();
+	
+   glNewList(fontOffset + CROSSHAIR, GL_COMPILE);
+   glBitmap(9, 9, 0, 0, 0, 0, crosshair);
    glEndList();
 }
 
@@ -188,6 +204,9 @@ void printString(char *s)
 int		buildTextures()
 {
 	int texNum, i, j, p, width, height;
+	double angle, incAngle;
+	GLfloat u, v;
+
 	char * buffer;
 	FILE * file;
 
@@ -240,6 +259,20 @@ int		buildTextures()
 			}
 						  
 	free (buffer);
+
+	/* Costruisce la tabella dei vertici in coordinate u,v */
+	texVertex = (GLfloat *) malloc (sizeof (GLfloat) * MAX_VERTEX_FACE * 2 * (MAX_VERTEX_FACE - 2));
+	for (i = 3; i < MAX_VERTEX_FACE; i++) {
+		incAngle = 3.141592 * 2 / i;
+		angle = 3.141592 * 3 / 2 - incAngle;
+		for (j = 0; j < i; j++, angle += incAngle) {
+			u = (GLfloat) (cos (angle) / 2 + 0.5);
+			v = (GLfloat) (sin (angle) / 2 + 0.5);
+			texVertex [((i-3) * MAX_VERTEX_FACE * 2) + j * 2] = u;
+			texVertex [((i-3) * MAX_VERTEX_FACE * 2) + j * 2 + 1] = v;
+		}
+	}
+
 	return 1;
 }
 
@@ -248,6 +281,8 @@ void	freeTextures()
 {
 	free (texName);
 	texName = NULL;
+	free (texVertex);
+	texVertex = NULL;
 }
 
 
@@ -297,9 +332,9 @@ int		buildStructure ()
 	mapPoly.nOthers = 0;
 
 	// Conta triangoli e altre facce
-	for (i = 0; i < mapGame->nPlaces; i++) {
+	for (i = 0; i < map.nPlaces; i++) {
 		for (j = 0; j < MAX_VERTEX_FACE; j++)
-			if (mapGame->face->v[j] == -1) break;
+			if (map.face->v[j] == -1) break;
 		if (j < 3) {
 #ifndef __DEBUG_MAP_
 		    MessageBox(NULL, "Map definition error.", "Error", MB_OK);
@@ -331,9 +366,9 @@ int		buildStructure ()
 	triIP = 0;
 	othIP = 0;
 
-	for (i = 0; i < mapGame->nPlaces; i++) {
+	for (i = 0; i < map.nPlaces; i++) {
 		for (j = 0; j < MAX_VERTEX_FACE; j++)
-			if (mapGame->face->v[j] == -1) break;
+			if (map.face->v[j] == -1) break;
 		if (j < 3)
 			continue;
 		if (j == 3) {
@@ -341,9 +376,9 @@ int		buildStructure ()
 			mapPoly.triIdx[triIP++] = i; 
 
 			for (k = 0; k < 3; k++) {
-				mapPoly.triV[triP++] = mapGame->vertex[mapGame->face[i].v[k]].x;
-				mapPoly.triV[triP++] = mapGame->vertex[mapGame->face[i].v[k]].y;
-				mapPoly.triV[triP++] = mapGame->vertex[mapGame->face[i].v[k]].z;
+				mapPoly.triV[triP++] = map.vertex[map.face[i].v[k]].x;
+				mapPoly.triV[triP++] = map.vertex[map.face[i].v[k]].y;
+				mapPoly.triV[triP++] = map.vertex[map.face[i].v[k]].z;
 			}
 		}
 		else {
@@ -352,9 +387,9 @@ int		buildStructure ()
 			mapPoly.othersNVx[othIP++] = j;
 			
 			for (k = 0; k < j; k++) {
-				mapPoly.othersV[othP++] = mapGame->vertex[mapGame->face[i].v[k]].x;
-				mapPoly.othersV[othP++] = mapGame->vertex[mapGame->face[i].v[k]].y;
-				mapPoly.othersV[othP++] = mapGame->vertex[mapGame->face[i].v[k]].z;
+				mapPoly.othersV[othP++] = map.vertex[map.face[i].v[k]].x;
+				mapPoly.othersV[othP++] = map.vertex[map.face[i].v[k]].y;
+				mapPoly.othersV[othP++] = map.vertex[map.face[i].v[k]].z;
 			}
 		}
 	}	
@@ -615,41 +650,49 @@ void	explosion ()
 	int i;
 
 	// Scòppia
-	for (i = 0; i < mapGame->nPlaces; i++)
-		if (mapGame->place[i] & MAP_PLACE_MINE && !(mapGame->place[i] & MAP_PLACE_FLAG))
-			mapGame->place[i] &= ~(MAP_PLACE_COVERED);
-	ended = 1;
+	for (i = 0; i < map.nPlaces; i++)
+		if (map.place[i] & MAP_PLACE_MINE && !(map.place[i] & MAP_PLACE_FLAG))
+			map.place[i] &= ~(MAP_PLACE_COVERED);
+	ended = youLose = 1;
 }
 
 
-void	secureSweeper (int idx)
+// Ritorna 1 se il campo è finito!
+int		secureSweeper (int idx)
 {
 	int i = -1, neigh;
+	int end = 0;
 
 #ifdef _DEBUG
-	if (mapGame->place[idx] & MAP_PLACE_COVERED == 0)
+	if (map.place[idx] & MAP_PLACE_COVERED == 0)
 		__asm {int 3}
 #endif
 
-	mapGame->place[idx] &= (~MAP_PLACE_COVERED);
-	mapGame->nChecked++;
+	map.place[idx] &= (~MAP_PLACE_COVERED);
+	map.nChecked++;
 
-	if ((mapGame->place[idx] & MAP_PLACE_NUMMASK) != 0)
-		return;
+	if ((map.place[idx] & MAP_PLACE_NUMMASK) != 0)
+		return (map.nChecked + map.nTotalMines == map.nPlaces);
 
-	while (i++, ((neigh = mapGame->neighbour[idx].n[i]) != -1) && i < MAX_NEIGHBOURS)
-		if (mapGame->place[neigh] & MAP_PLACE_COVERED && !(mapGame->place[neigh] & MAP_PLACE_FLAG)) 
-			secureSweeper (neigh);	
+	while (i++, ((neigh = map.neighbour[idx].n[i]) != -1) && i < MAX_NEIGHBOURS)
+		if (map.place[neigh] & MAP_PLACE_COVERED && !(map.place[neigh] & MAP_PLACE_FLAG)) 
+			if (secureSweeper (neigh))
+				end = 1;
+
+	return end;
 }
 
 
 
-int		mouseButton (UINT msg, int x, int y)
+int		mouseButton (UINT msg, int x, int y, int * unlock)
 {
 	int hit, k, n, err, flag, a;
 
-	if (ended)
+	*unlock = 0;
+	if (!game) {
+		*unlock = 1;
 		return 0;
+	}
 
 	switch (msg) {
 	case WM_LBUTTONDOWN:
@@ -658,43 +701,50 @@ int		mouseButton (UINT msg, int x, int y)
 
 	case WM_RBUTTONDOWN:
 		buttons |= 2;
+		if (ended)
+			return 0;
 
 		hit = selectFace (x, y);
 		if (hit == -1)
 			return 0;
-		if (!(mapGame->place[hit] & MAP_PLACE_COVERED))
+		if (!(map.place[hit] & MAP_PLACE_COVERED))
 			return 0;
 
-		if (mapGame->place[hit] & MAP_PLACE_FLAG)
-			mapGame->nMines++, mapGame->nChecked--;
+		map.place[hit] ^= MAP_PLACE_FLAG;
+		if (map.place[hit] & MAP_PLACE_FLAG)
+			map.nMines--;
 		else
-			mapGame->nMines--, mapGame->nChecked++;
-			
-		mapGame->place[hit] ^= MAP_PLACE_FLAG;
-		if (mapGame->nChecked == mapGame->nPlaces)
-			ended = 1;			// finito!
+			map.nMines++;
 		return 1;
 
 	case WM_LBUTTONUP:
 	case WM_RBUTTONUP:
 		
+		if (ended) {
+			*unlock = 1;
+			return 0;
+		}
+
 		hit = selectFace (x, y);
 		if (hit == -1)
 			return 0;
 
 		if (msg == WM_LBUTTONUP && buttons == 1) {
 			buttons = 0;
-			if ((!(mapGame->place[hit] & MAP_PLACE_COVERED)) ||
-				mapGame->place[hit] & MAP_PLACE_FLAG) 
+			if ((!(map.place[hit] & MAP_PLACE_COVERED)) ||
+				map.place[hit] & MAP_PLACE_FLAG) 
 				return 0;
 
-			if (mapGame->place[hit] & MAP_PLACE_MINE) {
+			if (map.place[hit] & MAP_PLACE_MINE) {
 				explosion();
 				return 1;		
 			}
-			secureSweeper (hit);
-			if (mapGame->nChecked == mapGame->nPlaces)
-				ended = 1;			// finito!
+			if (secureSweeper (hit)) {
+				ended = youWin = *unlock = 1;			// finito!
+				if (time / 10 < vars.hallsOfFame[map.typeIndex].time)
+					vars.hallsOfFame[map.typeIndex].time = time / 10, youWinRecord = 1;
+				map.nMines = 0;
+			}
 			return 1;
 		}
 		else if (msg == WM_RBUTTONUP && !(buttons & 1)) {
@@ -704,13 +754,13 @@ int		mouseButton (UINT msg, int x, int y)
 		else if (buttons == 3) {
 			// Proc. doppio tasto
 			buttons = 0;
-			n = mapGame->place[hit] & MAP_PLACE_NUMMASK;
-			if (mapGame->place[hit] & MAP_PLACE_COVERED || n == 0)
+			n = map.place[hit] & MAP_PLACE_NUMMASK;
+			if (map.place[hit] & MAP_PLACE_COVERED || n == 0)
 				return 0;
 			
 			err = flag = 0;
-			for (k = 0; k < MAX_NEIGHBOURS && mapGame->neighbour[hit].n[k] != -1; k++) {
-				a = mapGame->place[mapGame->neighbour[hit].n[k]] & (MAP_PLACE_MINE | MAP_PLACE_FLAG);
+			for (k = 0; k < MAX_NEIGHBOURS && map.neighbour[hit].n[k] != -1; k++) {
+				a = map.place[map.neighbour[hit].n[k]] & (MAP_PLACE_MINE | MAP_PLACE_FLAG);
 				if (a != 0 && a != (MAP_PLACE_MINE | MAP_PLACE_FLAG))
 					err++;
 				if (a & MAP_PLACE_FLAG)
@@ -718,12 +768,17 @@ int		mouseButton (UINT msg, int x, int y)
 			}
 			if (err == 0) {
 				k = -1;
-				while (k++, ((n = mapGame->neighbour[hit].n[k]) != -1) && k < MAX_NEIGHBOURS)
-					if (mapGame->place[n] & MAP_PLACE_COVERED && !(mapGame->place[n] & MAP_PLACE_FLAG)) 
-						secureSweeper (n);	
+				while (k++, ((n = map.neighbour[hit].n[k]) != -1) && k < MAX_NEIGHBOURS)
+					if (map.place[n] & MAP_PLACE_COVERED && !(map.place[n] & MAP_PLACE_FLAG)) 
+						if (secureSweeper (n))
+							ended = 1;
 
-				if (mapGame->nChecked == mapGame->nPlaces)
-					ended = 1;			// finito!
+				if (ended) {
+					youWin = *unlock = 1;			// finito!
+					if (time / 10 < vars.hallsOfFame[map.typeIndex].time)
+						vars.hallsOfFame[map.typeIndex].time = time / 10, youWinRecord = 1;
+					map.nMines = 0;
+				}
 				return 1;
 			}
 			else if (flag != n)
@@ -809,26 +864,27 @@ int		oglInit()
 
 
 
-int		gameInit(struct MINESWEEPER_MAP * map)
+int		gameInit(int rebuild)
 {
 	int i;
 
-	GLint nbits[3];
+	if (rebuild) {
+		GLint nbits[3];
 
-	// Cerca il numero di bit per colore disponibile
-	glGetIntegerv (GL_RED_BITS, nbits);
-	glGetIntegerv (GL_GREEN_BITS, nbits+1);
-	glGetIntegerv (GL_BLUE_BITS, nbits+2);
-	if ((1 << (nbits[0] + nbits[1] + nbits[2])) < map->nPlaces) {
-	    MessageBox(NULL, "Impossible to build colormap (bitperpixel insufficient", 
-				   "Error", MB_OK);
-	    return 0;
+		// Cerca il numero di bit per colore disponibile
+		glGetIntegerv (GL_RED_BITS, nbits);
+		glGetIntegerv (GL_GREEN_BITS, nbits+1);
+		glGetIntegerv (GL_BLUE_BITS, nbits+2);
+		if ((1 << (nbits[0] + nbits[1] + nbits[2])) < map.nPlaces) {
+		    MessageBox(NULL, "Impossible to build colormap (bitperpixel insufficient", 
+					   "Error", MB_OK);
+		    return 0;
+		}
+
+
+		if (!buildStructure())
+			return 0;
 	}
-
-	mapGame = map;
-
-	if (!buildStructure())
-		return 0;
 
 	setMatrix();
 	glMatrixMode(GL_MODELVIEW);
@@ -836,7 +892,7 @@ int		gameInit(struct MINESWEEPER_MAP * map)
 	glTranslatef (0, 0, Z_VIEW);
 
 	gamePaused = game = 1;
-	ended = 0;
+	ended = youWin = youLose = youWinRecord = 0;
 
 	for (i = 0; i < 16; i++)
 		rot[i] = 0;
@@ -846,9 +902,10 @@ int		gameInit(struct MINESWEEPER_MAP * map)
 }
 
 
-void	gameClose()
+void	gameClose(int destroy)
 {
-	freeMap();
+	if (destroy)
+		freeMap();
 	game = 0;
 }
 
@@ -915,9 +972,15 @@ void	updateDisplay()
 {
 	int i, j, p, idx, m;
 	char string[10];
+	char cross[2];
 
-    glClearColor (0.1f, 0.2f, 0.3f, 0.0);
-
+	if (youLose)
+	    glClearColor (0.6f, 0, 0, 0);
+	else if (youWin)
+		glClearColor (0.0f, 0.4f, 0.0f, 0);
+	else 
+		glClearColor (0.1f, 0.2f, 0.3f, 0);
+		
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	if (!game) {
@@ -945,20 +1008,7 @@ void	updateDisplay()
 		p = 0;
 		for (i = 0; i < mapPoly.nTri; i++) {
 			idx = mapPoly.triIdx[i];
-			if (mapGame->place[idx] & MAP_PLACE_FLAG) {
-				glEnable (GL_TEXTURE_2D);
-				m = mapGame->place[idx];
-				glBindTexture(GL_TEXTURE_2D, texName[TEX_FLAG]);
-				glBegin (GL_TRIANGLES);
-				glTexCoord2f (0,0);
-				glVertex3fv (mapPoly.triV + p);
-				glTexCoord2f (0.5,1);
-				glVertex3fv (mapPoly.triV + p + 3);
-				glTexCoord2f (1,0);
-				glVertex3fv (mapPoly.triV + p + 6);
-				glEnd();
-			}
-			if (mapGame->place[idx] & MAP_PLACE_COVERED) {
+			if (map.place[idx] & MAP_PLACE_COVERED && !(map.place[idx] & MAP_PLACE_FLAG)) {
 				glDisable (GL_TEXTURE_2D);
 				glColor3f (0.5, 0.5, 0.5);
 				glBegin (GL_TRIANGLES);
@@ -967,17 +1017,32 @@ void	updateDisplay()
 				glVertex3fv (mapPoly.triV + p + 6);
 				glEnd();
 			}
+			else if (map.place[idx] == 0)
+			{
+				glDisable (GL_TEXTURE_2D);
+				glColor3f (0.75, 0.75, 0.75);
+				glBegin (GL_TRIANGLES);
+				glVertex3fv (mapPoly.triV + p);
+				glVertex3fv (mapPoly.triV + p + 3);
+				glVertex3fv (mapPoly.triV + p + 6);
+				glEnd();
+			}
 			else {
 				glEnable (GL_TEXTURE_2D);
-				m = mapGame->place[idx];
-				glBindTexture(GL_TEXTURE_2D, texName[(m & MAP_PLACE_MINE) ? TEX_MINE : 
-												(m & MAP_PLACE_NUMMASK) + TEX_NUMBASE]);
+				m = map.place[idx];
+				if (m & MAP_PLACE_FLAG)
+					m = TEX_FLAG;
+				else if (m & MAP_PLACE_MINE)
+					m = TEX_MINE;
+				else
+					m = TEX_NUMBASE + (m & MAP_PLACE_NUMMASK);
+				glBindTexture(GL_TEXTURE_2D, texName[m]);
 				glBegin (GL_TRIANGLES);
-				glTexCoord2f (0,0);
+				glTexCoord2f (texVertex[0], texVertex[1]);
 				glVertex3fv (mapPoly.triV + p);
-				glTexCoord2f (0.5,1);
+				glTexCoord2f (texVertex[2], texVertex[3]);
 				glVertex3fv (mapPoly.triV + p + 3);
-				glTexCoord2f (1,0);
+				glTexCoord2f (texVertex[4], texVertex[5]);
 				glVertex3fv (mapPoly.triV + p + 6);
 				glEnd();
 			}
@@ -1012,18 +1077,26 @@ void	updateDisplay()
 
 	glColor3f(1,1,0);
 
+	// Mine rimanenti
 	glRasterPos2i(10, 10);
-	itoa (mapGame->nMines, string, 10);
+	itoa (map.nMines, string, 10);
 	printString(string);
 
-	glRasterPos2i(screenViewport[2] - 50, 10);
-	itoa (time / 10, string, 10);
+	// Tempo e record
+	itoa ((time < 99990) ? time / 10 : 9999, string, 10);
+	glRasterPos2i(screenViewport[2] - 10 * (strlen (string)+1), 10);
+	printString(string);
+
+	itoa (vars.hallsOfFame[map.typeIndex].time, string, 10);
+	glRasterPos2i(screenViewport[2] - 10 * (strlen (string)+1), 23);
 	printString(string);
 
 	// Puntatore
 	if (!gamePaused) {
-		glRasterPos2i (screenViewport[2] / 2 - 4, screenViewport[3] / 2 - 5);
-		printString ("0");
+		cross[0] = CROSSHAIR;
+		cross[1] = 0;
+		glRasterPos2i (screenViewport[2] / 2 - 4, screenViewport[3] / 2 - 4);
+		printString (cross);
 	}
 
     glPopMatrix();					// ricaric. la 3d proj.

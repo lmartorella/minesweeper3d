@@ -3,9 +3,6 @@
 
 #pragma once
 
-#include "map.h"
-#include "display.h"
-
 /////////////////////////////////////////////////////////////////////////////
 // CMineSweeper3DDlg dialog
 
@@ -38,7 +35,6 @@ protected:
 
     HGLRC				hRC;							// opengl context 
 	HPALETTE			hPalette;					/* custom palette (if needed) */
-	MINESWEEPER_MAP		map;
 	CDC			*		pDC;
 
 	// Generated message map functions
@@ -56,6 +52,7 @@ protected:
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 private:
+	void CtrlForWin();
 	bool poll;
 	void NewGame(DWORD map);
 	bool cursorSetting;

@@ -2,8 +2,15 @@
 //
 
 #include "stdafx.h"
+
+#include "map.h"
+#include "display.h"
+#include "vars.h"
+
 #include "MineSweeper3D.h"
 #include "MineSweeper3DDlg.h"
+#include "HallsOfFameDlg.h"
+#include "WonDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -11,6 +18,16 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
+
+extern "C" {
+	extern MINESWEEPER_MAP map;
+	extern MINESWEEPER_MAPTYPE mapType[];
+	extern int mapReady;
+
+	extern int youWin, youLose, youWinRecord;
+
+	extern struct GLOBAL_VARS vars;
+}
 
 /////////////////////////////////////////////////////////////////////////////
 // CMineSweeper3DApp
@@ -137,12 +154,6 @@ CMineSweeper3DDlg::CMineSweeper3DDlg(CWnd* pParent /*=NULL*/)
 
 	mx = my = 0;
 	mouseButtonState = 0;
-
-	map.type = MAP_NULL;
-	map.face = NULL;
-	map.neighbour = NULL;
-	map.place = NULL;
-	map.vertex = NULL;
 }
 
 void CMineSweeper3DDlg::DoDataExchange(CDataExchange* pDX)
@@ -182,7 +193,7 @@ bool	CMineSweeper3DDlg::PrepareOpenGL()
     memset(&pfd, 0, sizeof(pfd));
     pfd.nSize        = sizeof(pfd);
     pfd.nVersion     = 1;
-    pfd.dwFlags      = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | 
+    pfd.dwFlags      = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL |/* accelerator | */
 		               PFD_DOUBLEBUFFER;
     pfd.iPixelType   = PFD_TYPE_RGBA;
     pfd.cDepthBits   = 16;
@@ -285,8 +296,9 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 	//  when the application's main window is not a dialog
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
-	
-	// TODO: Add extra initialization here
+
+	LoadSettings ();
+
 	srand (time(NULL));
 
     if (!PrepareOpenGL()) 
@@ -313,43 +325,38 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 }
 
 
-struct ALLMAPS {
-	DWORD	commandType;
-	int		mines;
 
-	DWORD	mapType;
-	int		param;
-} maps[4] = {	{	IDM_ICO1, 2, MAP_NUPICOSAHEDRON, 0 },
-				{   IDM_ICO2, 8, MAP_NUPICOSAHEDRON, 1 },
-				{   IDM_ICO3, 32, MAP_NUPICOSAHEDRON, 2 },
-				{   IDM_ICO4, 128, MAP_NUPICOSAHEDRON, 3 } };
   
 		
 
-void	CMineSweeper3DDlg::NewGame (DWORD type)
+void	CMineSweeper3DDlg::NewGame (DWORD typeC)
 {
 	gaming = false;
-	gameClose();
-	destroyMap (&map);
 
 	for (int i = 0; i < 4; i++)
-		if (maps[i].commandType == type)
+		if (mapType[i].commandType == typeC)
 			break;
 
 	if (i >= 4)
 		return;
-	
-	if (!buildMap (&map, maps[i].mapType, maps[i].param)) {
-		AfxMessageBox ("Error building map", MB_OK);
-		exit (1);
+
+	bool changed = (int)map.typeIndex != i;
+	gameClose(changed == true);
+
+	if (changed) {
+		destroyMap ();
+		if (!buildMap (i)) {
+			AfxMessageBox ("Error building map", MB_OK);
+			exit (1);
+		}
 	}
 
-	if (!prepareMap (&map, maps[i].mines)) {				// mette le mine
+	if (!prepareMap (mapType[i].mines, changed == true)) {				// mette le mine
 		AfxMessageBox ("Too neighbour in map preparation", MB_OK);
 		exit (1);
 	}
 
-	if (!gameInit(&map))
+	if (!gameInit(changed == true))
 		exit (1);
 
 	QueryPerformanceCounter (&pauseCount);
@@ -413,9 +420,12 @@ HCURSOR CMineSweeper3DDlg::OnQueryDragIcon()
 
 BOOL CMineSweeper3DDlg::DestroyWindow() 
 {
+	if (!StoreSettings ()) 
+		AfxMessageBox ("Unable to write CFG file.");
+
 	gaming = false;
-	gameClose();
-	destroyMap (&map);
+	gameClose(1);
+	destroyMap ();
 	oglClose();
 
 	wglMakeCurrent(NULL, NULL);
@@ -459,6 +469,8 @@ void CMineSweeper3DDlg::OnRButtonDown(UINT nFlags, CPoint point)
 
 void CMineSweeper3DDlg::ButtonDown(DWORD button, UINT nFlags, CPoint point)
 {
+	int unlock;
+
 	SetCapture();
 	mx = point.x;
 	my = point.y;
@@ -466,8 +478,14 @@ void CMineSweeper3DDlg::ButtonDown(DWORD button, UINT nFlags, CPoint point)
 	    mouseButtonState |= 1;
 	if (button == WM_RBUTTONDOWN)
 	    mouseButtonState |= 2;
-	if (mouseButton (button, mx, my))
+	if (mouseButton (button, mx, my, &unlock))
 		PostMessage(WM_PAINT, 0, 0);
+
+	if (unlock) {
+		PauseGaming();
+		CtrlForWin();
+		PostMessage (WM_PAINT);
+	}
 }
 
 
@@ -475,7 +493,7 @@ void CMineSweeper3DDlg::OnLButtonUp(UINT nFlags, CPoint point)
 {
 	if (gaming)
 		ButtonUp (WM_LBUTTONUP, nFlags, point);
-	else 
+	else if (mapReady)
 		StartGaming();
 	CDialog::OnLButtonUp(nFlags, point);
 }
@@ -490,10 +508,16 @@ void CMineSweeper3DDlg::OnRButtonUp(UINT nFlags, CPoint point)
 
 void CMineSweeper3DDlg::ButtonUp(DWORD button, UINT nFlags, CPoint point)
 {
+	int unlock;
 	ReleaseCapture();
 	mouseButtonState = 0;
-	if (mouseButton (button, point.x, point.y))
+	if (mouseButton (button, point.x, point.y, &unlock))
 		PostMessage(WM_PAINT, 0, 0);
+	if (unlock) {
+		PauseGaming();
+		CtrlForWin();
+		PostMessage (WM_PAINT);
+	}
 }
 
 
@@ -529,14 +553,16 @@ void CMineSweeper3DDlg::OnMouseMove(UINT nFlags, CPoint point)
 BOOL CMineSweeper3DDlg::OnCommand(WPARAM wParam, LPARAM lParam) 
 {
 	CAboutDlg * dlgAbout;
-	
+	CHallsOfFameDlg * dlgFame;
+	int i;
+
 	switch (wParam) {
 	case IDM_ABOUTBOX:
 		dlgAbout = new CAboutDlg;
 		dlgAbout->DoModal();
 		delete (dlgAbout);
 		return TRUE;
-	case ID_FILE_EXIT:
+	case IDM_FILE_EXIT:
 		PostQuitMessage(0);
 		return TRUE;
 	case IDM_ICO1:
@@ -544,6 +570,15 @@ BOOL CMineSweeper3DDlg::OnCommand(WPARAM wParam, LPARAM lParam)
 	case IDM_ICO3:
 	case IDM_ICO4:
 		NewGame (wParam);
+		return TRUE;
+
+	case IDM_HALLSOFFAME:
+		dlgFame = new CHallsOfFameDlg;
+		for (i = 0; i < NUMMAPTYPE; i++)
+			dlgFame->fame[i] = vars.hallsOfFame[i];
+		dlgFame->DoModal();
+		delete (dlgFame);
+		return TRUE;
 
 	default:
 		return CDialog::OnCommand(wParam, lParam);
@@ -565,6 +600,8 @@ void CMineSweeper3DDlg::StartGaming()
 	SetCursorPos (p.x, p.y);
 	cursorSetting = true;
 
+	ClientToScreen (&rect);
+	ClipCursor (&rect);
 	ShowCursor (FALSE);
 	unpause();
 
@@ -581,6 +618,7 @@ void CMineSweeper3DDlg::PauseGaming()
 {
 	QueryPerformanceCounter (&pauseCount);
 	gaming = false;
+	ClipCursor (NULL);
 	ShowCursor (TRUE);
 	pause();
 }
@@ -626,4 +664,14 @@ BOOL CAboutDlg::OnInitDialog()
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 	              // EXCEPTION: OCX Property Pages should return FALSE
+}
+
+void CMineSweeper3DDlg::CtrlForWin()
+{
+	if (youWinRecord) {
+		CWonDlg dlg;
+		dlg.DoModal();
+		strncpy (vars.hallsOfFame[map.typeIndex].name, dlg.m_name, MAX_NAMELENGHT);
+		PostMessage (WM_COMMAND, IDM_HALLSOFFAME);
+	}
 }
