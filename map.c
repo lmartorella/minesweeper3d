@@ -52,9 +52,9 @@ static struct MINESWEEPER_FACE cubeIndices[6] = {
 BOOL	buildMap (struct MINESWEEPER_MAP * map, DWORD type)
 {
 	map->type = type;
-	map->isConvex = FALSE;
 
-	if (type == MAP_ICOSAHEDRON) {
+	switch (type) {
+	case MAP_ICOSAHEDRON:
 		map->nPlaces = 20;
 		map->nVertexes = 12;
 	
@@ -62,8 +62,8 @@ BOOL	buildMap (struct MINESWEEPER_MAP * map, DWORD type)
 		map->vertex = icoVdata;
 	
 		map->place = (int*) malloc (sizeof(int) * 20);
-	}
-	else if (type == MAP_CUBE) {
+		break;
+	case MAP_CUBE:
 		map->nPlaces = 6;
 		map->nVertexes = 8;
 	
@@ -71,10 +71,15 @@ BOOL	buildMap (struct MINESWEEPER_MAP * map, DWORD type)
 		map->vertex = cubeVdata;
 	
 		map->place = (int*) malloc (sizeof(int) * 6);
-	}
-	else
-		return FALSE;
+		break;
+	case MAP_VINS:
+		vinsFunction (map);
+		map->place = (int*) malloc (sizeof(int) * 80);
 
+		break;
+	default:
+		return FALSE;
+	}
 	return TRUE;
 }
 
@@ -83,6 +88,13 @@ BOOL	preDestroyMap (struct MINESWEEPER_MAP * map)
 {
 	if (map->type == MAP_ICOSAHEDRON || map->type == MAP_CUBE)
 		return TRUE;
+	else if (map->type == MAP_VINS) {
+		free (map->face);
+		free (map->vertex);
+		map->face = NULL;
+		map->vertex = NULL;
+		return TRUE;
+	}
 	return FALSE;
 }
 

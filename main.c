@@ -250,7 +250,7 @@ WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst,
     hRC = wglCreateContext(hDC);
     wglMakeCurrent(hDC, hRC);
 
-	if (!buildMap (&map, MAP_ICOSAHEDRON)) {
+	if (!buildMap (&map, MAP_VINS)) {
 		MessageBox (hWnd, "Error building map", "Error", MB_OK);
 		return 1;
 	}

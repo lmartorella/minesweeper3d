@@ -33,13 +33,7 @@ struct	MINESWEEPER_MAP {
 		/* respect Consistent orientation of vertex for culling */
 		struct MINESWEEPER_FACE	* face;
 		
-		/* For culling, GL_CW or GL_CCW */
-		GLenum	cullingMode;
-
-		/* TRUE -> Culling, FALSE -> zbuffer */
-		BOOL	isConvex;
-
-		
+	
 	// Gioco
 		int *	place;		// piazzole. -1 se c'è mina
 		int		nMines;
@@ -50,11 +44,13 @@ struct	MINESWEEPER_MAP {
 
 #define	MAP_ICOSAHEDRON		1
 #define	MAP_CUBE		    2
+#define MAP_VINS			3
 
 extern BOOL buildMap (struct MINESWEEPER_MAP * map, DWORD type);
 extern BOOL preDestroyMap (struct MINESWEEPER_MAP * map);
 extern BOOL destroyMap (struct MINESWEEPER_MAP * map);
 
-extern void prepareMap (struct MINESWEEPER_MAP * map, int mines);				
+extern void prepareMap (struct MINESWEEPER_MAP * map, int mines);	
+extern void	vinsFunction (struct MINESWEEPER_MAP * map);		
 
 

@@ -547,14 +547,7 @@ BOOL	oglInit(struct MINESWEEPER_MAP * map)
 	if (!buildStructure())
 		return FALSE;
 
-	if (map->isConvex) {
-		glFrontFace (map->cullingMode);
-		glCullFace (GL_BACK);
-		glEnable (GL_CULL_FACE);
-	}
-	else {
-		glEnable (GL_DEPTH_TEST);
-	}
+	glEnable (GL_DEPTH_TEST);
 
 	makeRasterFont();
 	if (!buildTextures())
@@ -642,10 +635,7 @@ void	updateDisplay()
 
     glClearColor (0.1f, 0.2f, 0.3f, 0.0);
 
-    if (mapGame->isConvex)
-		glClear(GL_COLOR_BUFFER_BIT);
-	else
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
 	/* ----------------- 3D mode ------------------ */
