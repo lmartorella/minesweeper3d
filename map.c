@@ -46,7 +46,9 @@ int		buildMap (struct MINESWEEPER_MAP * map, DWORD type, DWORD param)
 int		destroyMap (struct MINESWEEPER_MAP * map)
 {
 	free (map->place);
+	free (map->neighbour);
 	map->place = NULL;
+	map->neighbour = NULL;
 
 	if (map->type == MAP_CUBE)
 		return 1;
@@ -66,7 +68,7 @@ int		destroyMap (struct MINESWEEPER_MAP * map)
 
 
 
-int	enumerateNeighbor (struct MINESWEEPER_MAP * map, UINT idx, UINT * buffer, int bufferSize)
+int	enumerateNEIGHBOUR (struct MINESWEEPER_MAP * map, int idx, int * buffer, int bufferSize)
 {
 	int i, j, k, t = 0, bufferOk = 1, found;
 	
@@ -74,6 +76,8 @@ int	enumerateNeighbor (struct MINESWEEPER_MAP * map, UINT idx, UINT * buffer, in
 		bufferOk = 0;
 
 	for (i = 0; i < map->nPlaces; i++) {
+		if (i == idx) 
+			continue;
 		found = 0;
 		for (j = 0; j < MAX_VERTEX_FACE && found == 0; j++) {
 			if (map->face[i].v[j] == -1) 
@@ -86,7 +90,7 @@ int	enumerateNeighbor (struct MINESWEEPER_MAP * map, UINT idx, UINT * buffer, in
 						found = 1;
 		}
 		
-		if (found && (map->place[i] & MAP_PLACE_MINE)) {
+		if (found) {
 			if (bufferOk && t < bufferSize)
 				buffer[t] = i;
 			t++;
@@ -99,12 +103,23 @@ int	enumerateNeighbor (struct MINESWEEPER_MAP * map, UINT idx, UINT * buffer, in
 
 
 
-void prepareMap (struct MINESWEEPER_MAP * map, int mines)
+int	prepareMap (struct MINESWEEPER_MAP * map, int mines)
 {
-	int i, j;
-	
+	int i, j, c;
+
+	// Vicini
+	map->neighbour = (struct MINESWEEPER_NEIGHBOUR*) malloc (sizeof (struct MINESWEEPER_NEIGHBOUR) * map->nPlaces);
 	map->place = (int*) malloc (sizeof(int) * map->nPlaces);
-		
+
+	// Setta i vicini
+	for (i = 0; i < map->nPlaces; i++) {
+		c = enumerateNEIGHBOUR (map, i, map->neighbour[i].n, MAX_NEIGHBOURS);
+		if (c > MAX_NEIGHBOURS) 
+			return 0;
+		for (j = c; j < MAX_NEIGHBOURS; j++)
+			map->neighbour[i].n[j] = -1;
+	}
+	
 	// Mette mine
 	for (i = 0; i < map->nPlaces; i++)
 		map->place[i] = MAP_PLACE_COVERED;
@@ -118,8 +133,12 @@ void prepareMap (struct MINESWEEPER_MAP * map, int mines)
 
 	// Ora setta i numeri
 	for (i = 0; i < map->nPlaces; i++) {
-		map->place[i] += enumerateNeighbor (map, i, NULL, 0);
+		for (j = 0; j < MAX_NEIGHBOURS && map->neighbour[i].n[j] != -1; j++)
+			if (map->place[map->neighbour[i].n[j]] & MAP_PLACE_MINE)
+				map->place[i] ++; 
 	}
+
+	return 1;
 }			
 
 

@@ -7,9 +7,8 @@
 #undef __DEBUG_MAP_
 
 
-			/* current rotation */
-static GLfloat rot[2] = {0.0, 0.0};
-			/* device context */
+
+	/* device context */
 
 HDC		hDC;			
 
@@ -19,6 +18,10 @@ static  char message [256] = "0123456789";
 
 
 
+#define degrees 32.0
+
+// current rotation 
+static GLfloat rot[2] = {0.0, 0.0};				// x, y
 
 
 
@@ -422,7 +425,7 @@ int		selectFace (int x, int y)
     glLoadIdentity ();
     gluPickMatrix ((GLdouble) x, (GLdouble) (screenViewport[3] - y),
                     5.0, 5.0, screenViewport);
-    gluPerspective(45.0, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
+    gluPerspective(degrees, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
 
     glMatrixMode (GL_MODELVIEW);
 	glPushMatrix();
@@ -513,6 +516,42 @@ int		selectFace (int x, int y)
 
 
 
+void	secureSweeper (int idx)
+{
+	int i = -1, neigh;
+
+	mapGame->place[idx] &= (~MAP_PLACE_COVERED);
+	if ((mapGame->place[idx] & MAP_PLACE_NUMMASK) != 0)
+		return;
+
+	while (i++, ((neigh = mapGame->neighbour[idx].n[i]) != -1) && i < MAX_NEIGHBOURS)
+		if (mapGame->place[neigh] & MAP_PLACE_COVERED && !(mapGame->place[neigh] & MAP_PLACE_FLAG)) 
+			secureSweeper (neigh);	
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -570,12 +609,14 @@ void	normalViewMode()
 {
 	glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(45.0, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
+    gluPerspective(degrees, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
 	glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glTranslatef(0.0f, 0.0f, -3.6f);
 }
 
+
+static int mouseMoving = 0;
 
 int		mouseButton (UINT msg, int x, int y)
 {
@@ -586,28 +627,55 @@ int		mouseButton (UINT msg, int x, int y)
 		hit = selectFace (x, y);
 		if (hit == -1)
 			return 0;
-		if (mapGame->place[hit] & MAP_PLACE_COVERED) {
+
+		if ((!(mapGame->place[hit] & MAP_PLACE_COVERED)) ||
+			mapGame->place[hit] & MAP_PLACE_FLAG) 
+			return 0;
+
+		if (mapGame->place[hit] & MAP_PLACE_MINE) {
 			mapGame->place[hit] &= (~MAP_PLACE_COVERED);
-			return 1;
+			return 1;		
 		}
-		return 0;
+
+		secureSweeper (hit);
+		return 1;
 	
 	case WM_RBUTTONDOWN:
-		normalViewMode();
+		hit = selectFace (x, y);
+		if (hit == -1) {
+			mouseMoving = 1;
+			return 0;
+		}
+
+		mouseMoving = 0;
+		if (!(mapGame->place[hit] & MAP_PLACE_COVERED))
+			return 0;
+		mapGame->place[hit] ^= MAP_PLACE_FLAG;
 		return 1;
+
 	default:
 		return 0;
 	}
 }
 
+
+
+
+
 int		mouseMove(int state, int dx, int dy)
 {
-	if (state != 2)
+	GLfloat x, y;
+
+	if (state != 2 || mouseMoving == 0)
 		return 0;
  
 	
-	rot[0] += (dy * 180.0f) / 222.0f;
-	rot[1] -= (dx * 180.0f) / 222.0f;
+	y = (dy * 180.0f) / 222.0f;
+	x = (dx * 180.0f) / 222.0f;
+
+	rot[0] = rot[0] + y;
+	rot[1] = rot[1] - x;
+
 #define clamp(x) x = x > 360.0f ? x-360.0f : x < -360.0f ? x+=360.0f : x
 	clamp(rot[0]);
 	clamp(rot[1]);
@@ -665,6 +733,19 @@ void	updateDisplay()
 		p = 0;
 		for (i = 0; i < mapPoly.nTri; i++) {
 			idx = mapPoly.triIdx[i];
+			if (mapGame->place[idx] & MAP_PLACE_FLAG) {
+				glEnable (GL_TEXTURE_2D);
+				m = mapGame->place[idx];
+				glBindTexture(GL_TEXTURE_2D, texName[TEX_FLAG]);
+				glBegin (GL_TRIANGLES);
+				glTexCoord2f (0,0);
+				glVertex3fv (mapPoly.triV + p);
+				glTexCoord2f (0.5,1);
+				glVertex3fv (mapPoly.triV + p + 3);
+				glTexCoord2f (1,0);
+				glVertex3fv (mapPoly.triV + p + 6);
+				glEnd();
+			}
 			if (mapGame->place[idx] & MAP_PLACE_COVERED) {
 				glDisable (GL_TEXTURE_2D);
 				glColor3f (0.5, 0.5, 0.5);

@@ -111,17 +111,7 @@ SOURCE=.\MineSweeper3DDlg.cpp
 # Begin Source File
 
 SOURCE=.\modelGen.c
-
-!IF  "$(CFG)" == "MineSweeper3D - Win32 Release"
-
 # ADD CPP /Yu"stdafx2.h"
-
-!ELSEIF  "$(CFG)" == "MineSweeper3D - Win32 Debug"
-
-# ADD CPP /Yu"stdafx2.h"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
@@ -170,15 +160,11 @@ SOURCE=.\stdafx2.h
 # PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
 # Begin Source File
 
-SOURCE=.\res\MineSweeper3D.ico
-# End Source File
-# Begin Source File
-
 SOURCE=.\MineSweeper3D.rc
 # End Source File
 # Begin Source File
 
-SOURCE=.\res\MineSweeper3D.rc2
+SOURCE=.\MineSweeper3D.rc2
 # End Source File
 # End Group
 # Begin Source File

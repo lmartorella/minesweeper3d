@@ -245,7 +245,10 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 		exit (1);
 	}
 
-	prepareMap (&map, 8);				// mette le mine
+	if (!prepareMap (&map, 128)) {				// mette le mine
+		AfxMessageBox ("Too neighbour in map preparation", MB_OK);
+		exit (1);
+	}
 
 	if (!oglInit(&map, pDC->m_hDC))
 		exit (1);
@@ -329,16 +332,6 @@ void CMineSweeper3DDlg::OnSize(UINT nType, int cx, int cy)
 	PostMessage(WM_PAINT, 0, 0);
 }
 
-void CMineSweeper3DDlg::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags) 
-{
-	// TODO: Add your message handler code here and/or call default
-	switch (nChar) {
-	case 27:			/* ESC key */
-	    PostQuitMessage(0);
-	    break;
-	}
-	CDialog::OnChar(nChar, nRepCnt, nFlags);
-}
 
 void CMineSweeper3DDlg::OnLButtonDown(UINT nFlags, CPoint point) 
 {
