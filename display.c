@@ -144,10 +144,10 @@ static int texRows = 1, texColumns = 12;
 /* Texture Object */
 #define TEX_FLAG 0
 #define TEX_MINE 1
-#define TEX_NUMBER_BASE 1
+#define TEX_NUMBASE 2
 static GLuint * texName = NULL;
 
-BOOL	buildTextures()
+int		buildTextures()
 {
 	int texNum, i, j, p, width, height;
 	char * buffer;
@@ -163,11 +163,11 @@ BOOL	buildTextures()
 	file = fopen (texFileName, "rb");
 	if (file == NULL) {
 	    MessageBox(NULL, "Texfile not found", "Error", MB_OK);
-	    return FALSE;
+	    return 0;
 	}
 	if (fread (buffer, width * height * 3, 1, file) != 1) {
 	    MessageBox(NULL, "Texfile error", "Error", MB_OK);
-	    return FALSE;
+	    return 0;
 	}
 	fclose (file);
 
@@ -202,7 +202,7 @@ BOOL	buildTextures()
 						  
 	
 	free (buffer);
-	return TRUE;
+	return 1;
 }
 
 
@@ -268,7 +268,7 @@ struct	MAP_POLY {
 } mapPoly = {0, NULL, NULL, 0, NULL, NULL, NULL};
 
 
-BOOL	buildStructure ()
+int		buildStructure ()
 {
 	// Crea la MAP_POLY
 	int i, j, k, nvo;
@@ -285,7 +285,7 @@ BOOL	buildStructure ()
 		if (j < 3) {
 #ifndef __DEBUG_MAP_
 		    MessageBox(NULL, "Map definition error.", "Error", MB_OK);
-		    return FALSE;
+		    return 0;
 #else
 			continue;
 #endif
@@ -341,7 +341,7 @@ BOOL	buildStructure ()
 		}
 	}	
 	
-	return TRUE;
+	return 1;
 }
 
 
@@ -529,7 +529,7 @@ int		selectFace (int x, int y)
 
 
 
-BOOL	oglInit(struct MINESWEEPER_MAP * map, HDC newhDC)
+int		oglInit(struct MINESWEEPER_MAP * map, HDC newhDC)
 {
 	GLint nbits[3];
 
@@ -543,19 +543,19 @@ BOOL	oglInit(struct MINESWEEPER_MAP * map, HDC newhDC)
 	if ((1 << (nbits[0] + nbits[1] + nbits[2])) < map->nPlaces) {
 	    MessageBox(NULL, "Impossible to build colormap (bitperpixel insufficient", 
 				   "Error", MB_OK);
-	    return FALSE;
+	    return 0;
 	}
 
 	if (!buildStructure())
-		return FALSE;
+		return 0;
 
 	glEnable (GL_DEPTH_TEST);
 
 	makeRasterFont();
 	if (!buildTextures())
-		return FALSE;
+		return 0;
 
-	return TRUE;
+	return 1;
 }
 
 
@@ -577,32 +577,33 @@ void	normalViewMode()
 }
 
 
-BOOL	mouseButton (UINT msg, int x, int y)
+int		mouseButton (UINT msg, int x, int y)
 {
 	int hit;
 
-	if (msg == WM_LBUTTONDOWN) {
+	switch (msg) {
+	case WM_LBUTTONDOWN:
 		hit = selectFace (x, y);
 		if (hit == -1)
-			return FALSE;
-		if (mapGame->place[hit] == PLACE_MINECOVERED)
-			mapGame->place[hit] = PLACE_COVERED;
-		else
-			mapGame->place[hit] = PLACE_MINECOVERED;
-		return TRUE;
-	}
-	if (msg == WM_RBUTTONDOWN) {
+			return 0;
+		if (mapGame->place[hit] & MAP_PLACE_COVERED) {
+			mapGame->place[hit] &= (~MAP_PLACE_COVERED);
+			return 1;
+		}
+		return 0;
+	
+	case WM_RBUTTONDOWN:
 		normalViewMode();
-		return TRUE;
+		return 1;
+	default:
+		return 0;
 	}
-	return FALSE;
 }
 
-
-BOOL	mouseMove(int state, int dx, int dy)
+int		mouseMove(int state, int dx, int dy)
 {
 	if (state != 2)
-		return FALSE;
+		return 0;
  
 	
 	rot[0] += (dy * 180.0f) / 222.0f;
@@ -610,7 +611,7 @@ BOOL	mouseMove(int state, int dx, int dy)
 #define clamp(x) x = x > 360.0f ? x-360.0f : x < -360.0f ? x+=360.0f : x
 	clamp(rot[0]);
 	clamp(rot[1]);
-	return TRUE;
+	return 1;
 }
 
 
@@ -633,7 +634,7 @@ void	changeWindowSize(int width, int height)
 
 void	updateDisplay()
 {
-	int i, j, p, idx;
+	int i, j, p, idx, m;
 
     glClearColor (0.1f, 0.2f, 0.3f, 0.0);
 
@@ -664,7 +665,7 @@ void	updateDisplay()
 		p = 0;
 		for (i = 0; i < mapPoly.nTri; i++) {
 			idx = mapPoly.triIdx[i];
-			if (mapGame->place[idx] == PLACE_COVERED) {
+			if (mapGame->place[idx] & MAP_PLACE_COVERED) {
 				glDisable (GL_TEXTURE_2D);
 				glColor3f (0.5, 0.5, 0.5);
 				glBegin (GL_TRIANGLES);
@@ -675,7 +676,9 @@ void	updateDisplay()
 			}
 			else {
 				glEnable (GL_TEXTURE_2D);
-				glBindTexture(GL_TEXTURE_2D, texName[TEX_FLAG]);
+				m = mapGame->place[idx];
+				glBindTexture(GL_TEXTURE_2D, texName[(m & MAP_PLACE_MINE) ? TEX_MINE : 
+												(m & MAP_PLACE_NUMMASK) + TEX_NUMBASE]);
 				glBegin (GL_TRIANGLES);
 				glTexCoord2f (0,0);
 				glVertex3fv (mapPoly.triV + p);

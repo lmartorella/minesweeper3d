@@ -6,10 +6,10 @@
 #define MAX_VERTEX_FACE 12
 
 
-#define PLACE_COVERED	  -2
-#define PLACE_MINECOVERED -1
-#define PLACE_CLEAR       0
-
+#define MAP_PLACE_CLEAR     0
+#define	MAP_PLACE_MINE		0x80000000
+#define	MAP_PLACE_COVERED   0x40000000
+#define	MAP_PLACE_NUMMASK   0xffff
 
 struct	MINESWEEPER_VERTEX {
 		float	x, y, z;
@@ -35,7 +35,7 @@ struct	MINESWEEPER_MAP {
 		
 	
 	// Gioco
-		int *	place;		// piazzole. -1 se c'è mina
+		UINT *	place;		// piazzole. -1 se c'è mina
 		int		nMines;
 };
 
@@ -49,17 +49,15 @@ struct	MINESWEEPER_MAP {
 
 #ifdef __cplusplus
 extern "C" {
-	BOOL buildMap (MINESWEEPER_MAP * map, DWORD type);
-	BOOL preDestroyMap (MINESWEEPER_MAP * map);
-	BOOL destroyMap (MINESWEEPER_MAP * map);
+	int	buildMap (MINESWEEPER_MAP * map, DWORD type);
+	int	 destroyMap (MINESWEEPER_MAP * map);
 
 	void prepareMap (MINESWEEPER_MAP * map, int mines);	
 	void	vinsFunction (MINESWEEPER_MAP * map);		
 }
 #else
-	extern BOOL buildMap (struct MINESWEEPER_MAP * map, DWORD type);
-	extern BOOL preDestroyMap (struct MINESWEEPER_MAP * map);
-	extern BOOL destroyMap (struct MINESWEEPER_MAP * map);
+	extern int	buildMap (struct MINESWEEPER_MAP * map, DWORD type);
+	extern int  destroyMap (struct MINESWEEPER_MAP * map);
 
 	extern void prepareMap (struct MINESWEEPER_MAP * map, int mines);	
 	extern void	vinsFunction (struct MINESWEEPER_MAP * map);		

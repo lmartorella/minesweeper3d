@@ -49,7 +49,7 @@ static struct MINESWEEPER_FACE cubeIndices[6] = {
 };
 
 
-BOOL	buildMap (struct MINESWEEPER_MAP * map, DWORD type)
+int		buildMap (struct MINESWEEPER_MAP * map, DWORD type)
 {
 	map->type = type;
 
@@ -78,38 +78,65 @@ BOOL	buildMap (struct MINESWEEPER_MAP * map, DWORD type)
 
 		break;
 	default:
-		return FALSE;
+		return 0;
 	}
-	return TRUE;
+	return 1;
 }
 
 
-BOOL	preDestroyMap (struct MINESWEEPER_MAP * map)
+
+
+int		destroyMap (struct MINESWEEPER_MAP * map)
 {
+	free (map->place);
+	map->place = NULL;
+
 	if (map->type == MAP_ICOSAHEDRON || map->type == MAP_CUBE)
-		return TRUE;
+		return 1;
 	else if (map->type == MAP_VINS) {
 		free (map->face);
 		free (map->vertex);
 		map->face = NULL;
 		map->vertex = NULL;
-		return TRUE;
+		return 1;
 	}
-	return FALSE;
+	else
+		return 0;
+	return 1;
 }
 
 
-BOOL	destroyMap (struct MINESWEEPER_MAP * map)
+
+
+
+int	enumerateNeighbor (struct MINESWEEPER_MAP * map, UINT idx, UINT * buffer, int bufferSize)
 {
-	free (map->place);
-	map->place = NULL;
-	return TRUE;
+	int i, j, k, t = 0, bufferOk = 1, found;
+	
+	if (buffer == NULL || bufferSize <= 0)
+		bufferOk = 0;
+
+	for (i = 0; i < map->nPlaces; i++) {
+		found = 0;
+		for (j = 0; j < MAX_VERTEX_FACE && found == 0; j++) {
+			if (map->face[i].v[j] == -1) 
+				break;
+
+			for (k = 0; k < MAX_VERTEX_FACE && found == 0; k++)
+				if (map->face[idx].v[k] == -1) 
+					break;
+				else if (map->face[i].v[j] == map->face[idx].v[k])
+						found = 1;
+		}
+		
+		if (found && (map->place[i] & MAP_PLACE_MINE)) {
+			if (bufferOk && t < bufferSize)
+				buffer[t] = i;
+			t++;
+		}
+	}
+	return t;
 }
-
-
-
-
-
 
 
 
@@ -117,11 +144,23 @@ BOOL	destroyMap (struct MINESWEEPER_MAP * map)
 
 void prepareMap (struct MINESWEEPER_MAP * map, int mines)
 {
-	int i;
-	
+	int i, j;
+		
 	// Mette mine
 	for (i = 0; i < map->nPlaces; i++)
-		map->place[i] = PLACE_COVERED;
+		map->place[i] = MAP_PLACE_COVERED;
+
+	for (i = 0; i < mines; i++) {
+		do {
+			j = (int)ceil(((double)rand() / RAND_MAX) * map->nPlaces);
+		} while (map->place[j] & MAP_PLACE_MINE);
+		map->place[j] |= MAP_PLACE_MINE;
+	}
+
+	// Ora setta i numeri
+	for (i = 0; i < map->nPlaces; i++) {
+		map->place[i] += enumerateNeighbor (map, i, NULL, 0);
+	}
 }			
 
 

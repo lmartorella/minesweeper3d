@@ -231,6 +231,8 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 	
 	// TODO: Add extra initialization here
+	srand (time(NULL));
+
     if (!PrepareOpenGL()) 
 		exit (1);
 
@@ -243,16 +245,11 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 		exit (1);
 	}
 
-	prepareMap (&map, 100);				// mette le mine
+	prepareMap (&map, 10);				// mette le mine
 
 	if (!oglInit(&map, pDC->m_hDC))
 		exit (1);
 
-	if (!preDestroyMap (&map)) {
-		AfxMessageBox ("Error pre-destroying map", MB_OK);
-		exit (1);
-	}
-	
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
