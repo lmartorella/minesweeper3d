@@ -190,6 +190,10 @@ SOURCE=.\MineSweeper3D.rc2
 # End Group
 # Begin Source File
 
+SOURCE=.\alfatesting.txt
+# End Source File
+# Begin Source File
+
 SOURCE=.\ReadMe.txt
 # End Source File
 # Begin Source File

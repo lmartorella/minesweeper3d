@@ -6,7 +6,8 @@ extern "C" {
 	int		mouseButton (UINT, int, int, int * unlock);
 	int		mouseMove(int dx, int dy);
 	void	changeWindowSize(int width, int height);
-
+	int		rebuildTextures();
+	
 	void	updateDisplay();
 
 	int		gameInit(int rebuild);
@@ -24,6 +25,7 @@ extern "C" {
 	extern int	mouseButton (UINT, int, int, int * unlock);
 	extern int  mouseMove(int dx, int dy);
 	extern void changeWindowSize(int width, int height);
+	extern int rebuildTextures();
 
 	extern void	updateDisplay();
 

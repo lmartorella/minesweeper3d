@@ -4,7 +4,7 @@
 
 
 
-#define CFGFILE_VER 1
+#define CFGFILE_VER 2
 #define MAX_NAMELENGHT 32
 
 struct SUPERSWEEPER {
@@ -14,6 +14,7 @@ struct SUPERSWEEPER {
 
 struct	GLOBAL_VARS {
 	struct SUPERSWEEPER hallsOfFame[NUMMAPTYPE];
+	int	   filtering;
 };
 
 

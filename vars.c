@@ -17,6 +17,7 @@ void	DefaultSettings ()
 		vars.hallsOfFame[i].time = 9999;
 		vars.hallsOfFame[i].name[0] = 0;
 	}
+	vars.filtering = 1;
 }
 
 
@@ -57,3 +58,5 @@ int		StoreSettings ()
 
 	return 1;
 }
+
+

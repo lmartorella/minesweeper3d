@@ -24,6 +24,7 @@ static int texRows = 1, texColumns = 15;
 
 /* Texture Object */
 #define TEX_FLAG 1
+#define TEX_FLAGCROSSED 14
 #define TEX_MINE 0
 #define TEX_NUMBASE 1
 static GLuint * texName = NULL;
@@ -54,6 +55,7 @@ struct	MAP_POLY {
 
 /* Mouse buttons */
 static  int buttons = 0;
+static  GLfloat precision = 1.0;
 #define X_SENS 2.25e-03f
 #define Y_SENS 2.25e-03f
 
@@ -241,11 +243,18 @@ int		buildTextures()
 			glBindTexture(GL_TEXTURE_2D, texName[p]);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-		                   GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-				           GL_LINEAR);
-
+			if (vars.filtering) {
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+			                GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+					           GL_LINEAR);
+			}
+			else {
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+								GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+					           GL_NEAREST);
+			}
 			glTexImage2D (GL_TEXTURE_2D,
 				          0,
 						  GL_RGB,
@@ -285,6 +294,13 @@ void	freeTextures()
 	texVertex = NULL;
 }
 
+
+
+int	 rebuildTextures()
+{
+	freeTextures();
+	return buildTextures();
+}
 
 
 
@@ -473,7 +489,7 @@ int		selectFace (int x, int y)
 	glPushMatrix();
     glLoadIdentity ();
     gluPickMatrix ((GLdouble) x, (GLdouble) (screenViewport[3] - y),
-                    2.0, 2.0, screenViewport);
+                    precision, precision, screenViewport);
     gluPerspective(FOV, (float) screenViewport[2] / screenViewport[3], 0.001, 30.0);
 
 	p = 0;
@@ -633,28 +649,33 @@ int		mouseMove(int dx, int dy)
 	rotxy[8] = st, rotxy[9] = -sf*ct, rotxy[10] = ct*cf;
 	
 	mult (rotxy, rot, r);
+	memcpy (rot, r, sizeof (GLfloat) * 16);
 
 	glLoadIdentity();
 	glTranslatef (0.0, 0.0, Z_VIEW);
-	glMultMatrixf (r);
-
-	memcpy (rot, r, sizeof (GLfloat) * 16);
+	glMultMatrixf (rot);
 
 	return 1;
 }
 
 
 
-void	explosion ()
+
+void	totalSweeper(int uncover)
 {
 	int i;
-
-	// Scòppia
-	for (i = 0; i < map.nPlaces; i++)
+	for (i = 0; i < map.nPlaces; i++) {
+		if (map.place[i] & MAP_PLACE_FLAG && !(map.place[i] & MAP_PLACE_MINE))
+			map.place[i] |= MAP_PLACE_FALSEFLAG;
 		if (map.place[i] & MAP_PLACE_MINE && !(map.place[i] & MAP_PLACE_FLAG))
-			map.place[i] &= ~(MAP_PLACE_COVERED);
-	ended = youLose = 1;
+			if (uncover)
+				map.place[i] &= ~(MAP_PLACE_COVERED);
+			else
+				map.place[i] |= MAP_PLACE_FLAG;
+	}
 }
+
+
 
 
 // Ritorna 1 se il campo è finito!
@@ -736,7 +757,8 @@ int		mouseButton (UINT msg, int x, int y, int * unlock)
 				return 0;
 
 			if (map.place[hit] & MAP_PLACE_MINE) {
-				explosion();
+				totalSweeper(1);
+				ended = youLose = 1;
 				return 1;		
 			}
 			if (secureSweeper (hit)) {
@@ -744,6 +766,7 @@ int		mouseButton (UINT msg, int x, int y, int * unlock)
 				if (time / 10 < vars.hallsOfFame[map.typeIndex].time)
 					vars.hallsOfFame[map.typeIndex].time = time / 10, youWinRecord = 1;
 				map.nMines = 0;
+				totalSweeper(0);
 			}
 			return 1;
 		}
@@ -778,13 +801,15 @@ int		mouseButton (UINT msg, int x, int y, int * unlock)
 					if (time / 10 < vars.hallsOfFame[map.typeIndex].time)
 						vars.hallsOfFame[map.typeIndex].time = time / 10, youWinRecord = 1;
 					map.nMines = 0;
+					totalSweeper(0);
 				}
 				return 1;
 			}
 			else if (flag != n)
 				return 0;
 			// Esplode
-			explosion();
+			totalSweeper(1);
+			ended = youLose = 1;
 			return 1;
 		}
 
@@ -992,10 +1017,10 @@ void	updateDisplay()
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
 	
 	glColor3f (0,0,0);				// per linee
-	
-	if (mapPoly.nTri > 0) {
 
-		p = 0;
+	// WIREFRAME
+	p = 0;
+	if (mapPoly.nTri > 0) 
 		for (i = 0; i < mapPoly.nTri; i++) {
 			glBegin (GL_LINE_STRIP);
 			glVertex3fv (mapPoly.triV + p);
@@ -1004,10 +1029,14 @@ void	updateDisplay()
 			glEnd();
 			p += 9;
 		}
-
+	
+	// TEXTURING
+	if (mapPoly.nTri > 0) {
 		p = 0;
 		for (i = 0; i < mapPoly.nTri; i++) {
 			idx = mapPoly.triIdx[i];
+			if (map.place[idx] & MAP_PLACE_FALSEFLAG)
+				i = i;
 			if (map.place[idx] & MAP_PLACE_COVERED && !(map.place[idx] & MAP_PLACE_FLAG)) {
 				glDisable (GL_TEXTURE_2D);
 				glColor3f (0.5, 0.5, 0.5);
@@ -1030,7 +1059,9 @@ void	updateDisplay()
 			else {
 				glEnable (GL_TEXTURE_2D);
 				m = map.place[idx];
-				if (m & MAP_PLACE_FLAG)
+				if (m & MAP_PLACE_FALSEFLAG)
+					m = TEX_FLAGCROSSED;
+				else if (m & MAP_PLACE_FLAG)
 					m = TEX_FLAG;
 				else if (m & MAP_PLACE_MINE)
 					m = TEX_MINE;

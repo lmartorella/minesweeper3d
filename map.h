@@ -10,6 +10,7 @@
 #define	MAP_PLACE_MINE		0x80000000
 #define	MAP_PLACE_COVERED   0x40000000
 #define MAP_PLACE_FLAG		0x20000000
+#define MAP_PLACE_FALSEFLAG 0x10000000
 #define	MAP_PLACE_NUMMASK   0xffff
 
 
@@ -55,6 +56,7 @@ struct	MINESWEEPER_MAP {
 #define MAP_NULL			-1
 #define	MAP_NUPICOSAHEDRON	1
 #define	MAP_CUBE		    2
+//#define MAP_V1			3
 
 #define NUMMAPTYPE 4
 

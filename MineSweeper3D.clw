@@ -2,7 +2,7 @@
 
 [General Info]
 Version=1
-LastClass=CWonDlg
+LastClass=CMineSweeper3DDlg
 LastTemplate=CDialog
 NewFileInclude1=#include "stdafx.h"
 NewFileInclude2=#include "MineSweeper3D.h"
@@ -13,12 +13,12 @@ Class2=CMineSweeper3DDlg
 Class3=CAboutDlg
 
 ResourceCount=6
-Resource1=IDD_RECORD
+Resource1=IDD_MINESWEEPER3D_DIALOG
 Resource2=IDR_MAINFRAME
-Resource3=IDD_ABOUTBOX
-Resource4=IDD_HALLSOFFAME
+Resource3=IDD_RECORD
+Resource4=IDD_ABOUTBOX
 Class4=CHallsOfFameDlg
-Resource5=IDD_MINESWEEPER3D_DIALOG
+Resource5=IDD_HALLSOFFAME
 Class5=CWonDlg
 Resource6=IDR_MENU1
 
@@ -68,8 +68,9 @@ Command3=IDM_ICO3
 Command4=IDM_ICO4
 Command5=IDM_FILE_EXIT
 Command6=IDM_HALLSOFFAME
-Command7=IDM_ABOUTBOX
-CommandCount=7
+Command7=IDM_FILTERING
+Command8=IDM_ABOUTBOX
+CommandCount=8
 
 [CLS:CHallsOfFameDlg]
 Type=0

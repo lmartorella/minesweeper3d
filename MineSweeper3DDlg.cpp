@@ -175,6 +175,7 @@ BEGIN_MESSAGE_MAP(CMineSweeper3DDlg, CDialog)
 	ON_WM_RBUTTONUP()
 	ON_WM_MOUSEMOVE()
 	ON_WM_TIMER()
+	ON_COMMAND(IDM_FILTERING, OnFiltering)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -319,7 +320,13 @@ BOOL CMineSweeper3DDlg::OnInitDialog()
 	cursorSetting = false;
 	poll = false;
 
-	oglInit();
+	if (!oglInit())
+		exit (1);
+
+	if (vars.filtering) 
+		CheckMenuItem (GetMenu()->m_hMenu, IDM_FILTERING, MF_CHECKED | MF_BYCOMMAND);
+	else
+		CheckMenuItem (GetMenu()->m_hMenu, IDM_FILTERING, MF_UNCHECKED | MF_BYCOMMAND);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -673,5 +680,22 @@ void CMineSweeper3DDlg::CtrlForWin()
 		dlg.DoModal();
 		strncpy (vars.hallsOfFame[map.typeIndex].name, dlg.m_name, MAX_NAMELENGHT);
 		PostMessage (WM_COMMAND, IDM_HALLSOFFAME);
+
+		youWinRecord = 0;
 	}
+}
+
+void CMineSweeper3DDlg::OnFiltering() 
+{
+	HMENU menu = GetMenu()->m_hMenu;
+	DWORD checked = CheckMenuItem (menu, IDM_FILTERING, MF_CHECKED | MF_BYCOMMAND);
+	if (checked == MF_CHECKED) {
+		CheckMenuItem (menu, IDM_FILTERING, MF_UNCHECKED | MF_BYCOMMAND);
+		vars.filtering = 0;
+	}
+	else 
+		vars.filtering = 1;
+
+	if (!rebuildTextures())
+		exit (1);
 }
